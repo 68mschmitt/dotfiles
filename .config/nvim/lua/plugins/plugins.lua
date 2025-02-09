@@ -59,7 +59,6 @@ return {
     {
         'seblj/roslyn.nvim',
         lazy = true,
-        dev = true,
         ft = "cs",
         events = { 'BufReadPre', 'BufNewFile' },
         opts = {
