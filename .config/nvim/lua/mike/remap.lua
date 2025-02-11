@@ -55,3 +55,5 @@ vim.keymap.set("n", "<Leader>dl", "<cmd>lua require'dap'.run_last()<CR>")
 
 vim.keymap.set("n", "<leader>acd", function() require('cmp').setup.buffer { enabled = false } end)
 vim.keymap.set("n", "<leader>ace", function() require('cmp').setup.buffer { enabled = true } end)
+
+vim.keymap.set("n", "<leader>tp", "<cmd>lua ColorMyEditor()<CR>")
