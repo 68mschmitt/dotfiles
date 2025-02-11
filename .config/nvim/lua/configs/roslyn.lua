@@ -1,19 +1,17 @@
 local M = {}
 M.opts =
 {
-    {
-        config = {
-            settings = {
-                ["csharp|code_lens"] = {
-                    dotnet_enable_references_code_lens = true,
-                },
-            }
-        },
-        -- choose_target = nil,
-        filewatching = true,
-        broad_search = true,
-        lock_target = true,
-    }
+    config = {
+        settings = {
+            ["csharp|code_lens"] = {
+                dotnet_enable_references_code_lens = true,
+            },
+        }
+    },
+
+    filewatching = true,
+    broad_search = true,
+    lock_target = true,
 };
 
 function M.init()

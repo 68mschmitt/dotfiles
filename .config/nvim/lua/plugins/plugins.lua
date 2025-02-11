@@ -1,5 +1,27 @@
 return {
     {
+        "folke/snacks.nvim",
+        priority = 1000,
+        lazy = false,
+        ---@type snacks.Config
+        opts = {
+            picker = { enabled = true },
+            dashboard = require('configs.snacks.dashboard').options(true),
+
+            terminal = { enabled = false },
+            bigfile = { enabled = false },
+            explorer = { enabled = false },
+            indent = { enabled = false },
+            input = { enabled = false },
+            notifier = { enabled = false },
+            quickfile = { enabled = false },
+            scope = { enabled = false },
+            scroll = { enabled = false },
+            statuscolumn = { enabled = false },
+            words = { enabled = false },
+        },
+    },
+    {
         'nvim-telescope/telescope.nvim',
         tag = '0.1.8',
         lazy = false,
@@ -10,6 +32,7 @@ return {
     {
         'nvim-treesitter/nvim-treesitter',
         lazy = false,
+        build = "TSUpdate",
         config = function() require("configs.treesitter") end,
     },
 
@@ -62,9 +85,7 @@ return {
         ft = "cs",
         events = { 'BufReadPre', 'BufNewFile' },
         opts = {
-            filewatching = true,
-            broad_search = true,
-            lock_target = true,
+            require('configs.roslyn').opts
         },
         init = require('configs.roslyn').init()
     },
