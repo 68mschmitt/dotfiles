@@ -1,0 +1,42 @@
+# Open Kitty Terminal
+cmd - return : /Applications/kitty.app/Contents/MacOS/kitty --single-instance -d ~
+
+# Open Browser (Chrome)
+cmd - b : open -n -a "Google Chrome"
+
+# Yabai
+cmd - up : yabai -m window --focus north
+cmd - down : yabai -m window --focus south
+cmd - right : yabai -m window --focus east
+cmd - left : yabai -m window --focus west
+
+# Focus on last focused window
+alt - tab : yabai -m window --focus recent
+
+# Move window
+cmd + ctrl - up : yabai -m window --swap north
+cmd + ctrl - down : yabai -m window --swap south
+cmd + ctrl - left : yabai -m window --swap west
+cmd + ctrl - right : yabai -m window --swap east
+
+# Move Focus Container to Workspace
+cmd + shift - 1 : yabai -m window --space 1; yabai -m space --focus 1
+cmd + shift - 2 : yabai -m window --space 2; yabai -m space --focus 2
+cmd + shift - 3 : yabai -m window --space 3; yabai -m space --focus 3
+cmd + shift - 4 : yabai -m window --space 4; yabai -m space --focus 4
+
+# Toggle Float
+cmd + shift - space : yabai -m window --toggle float
+
+# Resize Window
+cmd + shift - left : yabai -m window --resize left:-50:0; \
+                  yabai -m window --resize right:-50:0
+cmd + shift - down : yabai -m window --resize bottom:0:50; \
+                  yabai -m window --resize top:0:50
+cmd + shift - up : yabai -m window --resize top:0:-50; \
+                  yabai -m window --resize bottom:0:-50
+cmd + shift - right : yabai -m window --resize right:50:0; \
+                  yabai -m window --resize left:50:0
+
+# Equalize Size of Windows
+cmd + shift - e : yabai -m space --balance
