@@ -1,0 +1,137 @@
+{
+    "Insert note" : {
+        "prefix" : [ "note", "no" ],
+        "body" : "> [!NOTE]\n> ",
+        "description" : "Insert NOTE"
+    },
+    "Insert tip" : {
+        "prefix" : [ "tip", "ti" ],
+        "body" : "> [!TIP]\n> ",
+        "description" : "Insert tip"
+    },
+    "Insert important" : {
+        "prefix" : [ "important", "im" ],
+        "body" : "> [!IMPORTANT]\n> ",
+        "description" : "Insert important"
+    },
+    "Insert warning" : {
+        "prefix" : [ "warning", "wa" ],
+        "body" : "> [!WARNING]\n> ",
+        "description" : "Insert warning"
+    },
+    "Insert caution" : {
+        "prefix" : [ "caution", "ca" ],
+        "body" : "> [!CAUTION]\n> ",
+        "description" : "Insert caution"
+    },
+    "Insert abstract" : {
+        "prefix" : [ "abstract", "ab" ],
+        "body" : "> [!ABSTRACT]\n> ",
+        "description" : "Insert abstract"
+    },
+    "Insert summary" : {
+        "prefix" : [ "summary", "sum" ],
+        "body" : "> [!SUMMARY]\n> ",
+        "description" : "Insert summary"
+    },
+    "Insert tldr" : {
+        "prefix" : [ "tldr", "tl" ],
+        "body" : "> [!TLDR]\n> ",
+        "description" : "Insert tldr"
+    },
+    "Insert info" : {
+        "prefix" : [ "info", "in" ],
+        "body" : "> [!INFO]\n> ",
+        "description" : "Insert info"
+    },
+    "Insert todo" : {
+        "prefix" : [ "todo", "to" ],
+        "body" : "> [!TODO]\n> ",
+        "description" : "Insert todo"
+    },
+    "Insert hint" : {
+        "prefix" : [ "hint", "hi" ],
+        "body" : "> [!HINT]\n> ",
+        "description" : "Insert hint"
+    },
+    "Insert success" : {
+        "prefix" : [ "success", "s" ],
+        "body" : "> [!SUCCESS]\n> ",
+        "description" : "Insert success"
+    },
+    "Insert check" : {
+        "prefix" : [ "check", "ch" ],
+        "body" : "> [!CHECK]\n> ",
+        "description" : "Insert check"
+    },
+    "Insert done" : {
+        "prefix" : [ "done", "don" ],
+        "body" : "> [!DONE]\n> ",
+        "description" : "Insert done"
+    },
+    "Insert question" : {
+        "prefix" : [ "question", "qu" ],
+        "body" : "> [!QUESTION]\n> ",
+        "description" : "Insert question"
+    },
+    "Insert help" : {
+        "prefix" : [ "help", "he" ],
+        "body" : "> [!HELP]\n> ",
+        "description" : "Insert help"
+    },
+    "Insert faq" : {
+        "prefix" : [ "faq", "fa" ],
+        "body" : "> [!FAQ]\n> ",
+        "description" : "Insert faq"
+    },
+    "Insert attention" : {
+        "prefix" : [ "attention", "at" ],
+        "body" : "> [!ATTENTION]\n> ",
+        "description" : "Insert attention"
+    },
+    "Insert failure" : {
+        "prefix" : [ "failure", "fa" ],
+        "body" : "> [!FAILURE]\n> ",
+        "description" : "Insert failure"
+    },
+    "Insert fail" : {
+        "prefix" : [ "fail", "fa" ],
+        "body" : "> [!FAIL]\n> ",
+        "description" : "Insert fail"
+    },
+    "Insert missing" : {
+        "prefix" : [ "missing", "mi" ],
+        "body" : "> [!MISSING]\n> ",
+        "description" : "Insert missing"
+    },
+    "Insert danger" : {
+        "prefix" : [ "danger", "da" ],
+        "body" : "> [!DANGER]\n> ",
+        "description" : "Insert danger"
+    },
+    "Insert error" : {
+        "prefix" : [ "error", "er" ],
+        "body" : "> [!ERROR]\n> ",
+        "description" : "Insert error"
+    },
+    "Insert bug" : {
+        "prefix" : [ "bug", "bu" ],
+        "body" : "> [!BUG]\n> ",
+        "description" : "Insert bug"
+    },
+    "Insert example" : {
+        "prefix" : [ "example", "ex" ],
+        "body" : "> [!EXAMPLE]\n> ",
+        "description" : "Insert example"
+    },
+    "Insert quote" : {
+        "prefix" : [ "quote", "qu" ],
+        "body" : "> [!QUOTE]\n> ",
+        "description" : "Insert quote"
+    },
+    "Insert cite" : {
+        "prefix" : [ "cite", "c" ],
+        "body" : "> [!CITE]\n> ",
+        "description" : "Insert cite"
+    }
+}
