@@ -1,0 +1,10 @@
+# Destination for wallpapers
+WALLPAPER_DIR="$HOME/pictures/wallpapers"
+
+# List of repositories and sparse subfolders (format: REPO_URL::SPARSE_DIR)
+# Add more repos like this:
+# "https://github.com/username/another-wallpaper-repo.git::wallpapers"
+
+REPO_SOURCES=(
+  "https://github.com/D3Ext/aesthetic-wallpapers.git::images"
+)
