@@ -1,0 +1,17 @@
+# Destination for wallpapers
+WALLPAPER_DIR="$HOME/Pictures/wallpapers"
+# Timeout in seconds
+CHANGE_WALLPAPER_TIMEOUT=30
+
+# List of repositories and sparse subfolders (format: REPO_URL::SPARSE_DIR)
+# Add more repos like this:
+# "https://github.com/username/another-wallpaper-repo.git::wallpapers"
+# Or without the (SPARSE_DIR)
+# "https://github.com/username/another-wallpaper-repo.git"
+
+REPO_SOURCES=(
+  "https://github.com/D3Ext/aesthetic-wallpapers.git::images"
+  "https://github.com/dharmx/walls.git"
+)
+
+WALLPAPER_SCRIPTS_DIR=/Users/michael.schmitt/.scripts/wallpaper-scripts
