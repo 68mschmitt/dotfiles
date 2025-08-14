@@ -81,7 +81,10 @@ brew:xorgproto
 brew:xz
 brew:yabai
 brew:zstd
+
+# Shell Related
 brew:zoxide
+brew:starship
 
 # ---- casks (GUI apps/fonts) ----
 cask:docker-desktop
