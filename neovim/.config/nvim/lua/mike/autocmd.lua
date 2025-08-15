@@ -77,3 +77,21 @@ autocmd("LspAttach", {
         end
     end,
 })
+
+local jsx_group = vim.api.nvim_create_augroup("ReactJSX", { clear = true })
+
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+    group = jsx_group,
+    pattern = "*.js",
+    callback = function()
+        -- Search for an HTML tag in the buffer
+        for i = 1, math.min(100, vim.fn.line("$")) do
+            local line = vim.fn.getline(i)
+            if line:find("<[A-Za-z]") then
+                vim.bo.filetype = "javascriptreact"
+                break
+            end
+        end
+    end,
+})
+

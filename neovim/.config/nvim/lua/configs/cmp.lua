@@ -18,8 +18,9 @@ return {
     opts_extend = { "sources.default" },
     config = function(_, opts)
         require("blink.cmp").setup(opts)
-        require("luasnip.loaders.from_vscode").lazy_load()
-        require("luasnip.loaders.from_vscode").lazy_load({
+        local vs_code_snip = require("luasnip.loaders.from_vscode")
+        vs_code_snip.lazy_load()
+        vs_code_snip.lazy_load({
             paths = vim.fn.stdpath("config") .. "/snippets/"
         })
     end
