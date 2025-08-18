@@ -1,5 +1,5 @@
 # Open Kitty Terminal
-cmd - return : /Applications/kitty.app/Contents/MacOS/kitty --single-instance -d ~
+cmd - return : open -a Ghostty
 
 # Open Browser (Chrome)
 cmd - b : open -n -a "Google Chrome"
