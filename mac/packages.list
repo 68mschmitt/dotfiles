@@ -82,6 +82,9 @@ brew:xz
 brew:yabai
 brew:zstd
 
+# Neovim Related
+brew:fzf
+
 # Shell Related
 brew:zoxide
 brew:starship
