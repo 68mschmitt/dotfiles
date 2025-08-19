@@ -1,5 +1,10 @@
-vim.api.nvim_set_keymap("n", "<C-t>", "<C-p>", { noremap = true, silent = true })
+-- Comment out for now
+-- vim.api.nvim_set_keymap("n", "<C-t>", "<C-p>", { noremap = true, silent = true })
 
+-- Map line numbers and set relative line numbers to a keybinding
+vim.api.nvim_set_keymap("n", "<leader>num", ":set nu! rnu!<CR>", { noremap = true, silent = true })
+
+-- Clear search highlights and close the quickfix window
 vim.api.nvim_set_keymap("n", "<Esc>", "<cmd>noh<cr><cmd>cclose<cr>", { noremap = true, silent = true })
 
 -- QOL
@@ -7,8 +12,11 @@ vim.api.nvim_set_keymap("n", "<C-s>", "<cmd>w<cr>", { noremap = true, silent = t
 
 -- Nice for semi-colons while inside parenthesis
 vim.api.nvim_set_keymap("i", "<C-l>", "<C-o>a", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", "n", "nzzzv", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", "N", "Nzzzv", { noremap = true, silent = true })
+vim.api.nvim_set_keymap("i", "<C-h>", "<Esc>i", { noremap = true, silent = true })
+
+-- Center the screen when searching
+vim.api.nvim_set_keymap("n", "n", "nzz", { noremap = true, silent = true })
+vim.api.nvim_set_keymap("n", "N", "Nzz", { noremap = true, silent = true })
 
 -- Navigate splits
 vim.api.nvim_set_keymap("n", "<C-k>", "<C-w>k", { noremap = true, silent = true })
@@ -22,8 +30,7 @@ vim.api.nvim_set_keymap("n", "<C-A-h>", ":vert res -3 <CR>", { noremap = true, s
 vim.api.nvim_set_keymap("n", "<C-A-j>", ":res +3 <CR>", { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", "<C-A-k>", ":res -3 <CR>", { noremap = true, silent = true })
 
-vim.api.nvim_set_keymap("t", "<Esc><Esc>", [[<C-\><C-n>]], { noremap = true, silent = true })
-
+-- Move to the next or previous buffer with Tab and Shift-Tab
 vim.api.nvim_set_keymap("n", "<Tab>", ":bnext<CR>", { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", "<S-Tab>", ":bprev<CR>", { noremap = true, silent = true })
 
@@ -51,8 +58,6 @@ vim.api.nvim_set_keymap("n", "<leader>tn", "<cmd>.tabnew<cr>", { noremap = true,
 vim.api.nvim_set_keymap("n", "<leader>te", "<cmd>tabc<cr>", { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", "<leader>to", "<cmd>tabo<cr>", { noremap = true, silent = true })
 
-vim.api.nvim_set_keymap("n", "<leader>tp", "<cmd>lua ColorMyEditor()<CR>", { noremap = true, silent = true })
-
 -- Execute lua inline
 vim.api.nvim_set_keymap("n", "<leader><leader>x", "<cmd>source %<cr>", { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", "<leader>x", ":.lua<cr>", { noremap = true, silent = true })
@@ -61,7 +66,6 @@ vim.api.nvim_set_keymap("v", "<leader>x", ":lua<cr>", { noremap = true, silent =
 -- Quick fix navigation
 vim.api.nvim_set_keymap("n", "<A-n>", "<cmd>cnext<cr>", { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", "<A-p>", "<cmd>cprev<cr>", { noremap = true, silent = true })
--- vim.api.nvim_set_keymap("n", "<esc>", "<cmd>cclose<cr>", { noremap = true, silent = true })
 
 -- Close a buffer
 vim.api.nvim_set_keymap("n", "<leader>cb", "<cmd>bdel!<cr>", { noremap = true, silent = true })
