@@ -1,22 +1,23 @@
 return {
-  "obsidian-nvim/obsidian.nvim",
-  version = "*",
-  lazy = true,
-  ft = "markdown",
-  dependencies = { "nvim-lua/plenary.nvim" },
-  opts = {
-    workspaces = {
-      {
-        name = "personal",
-        path = "~/projects/second-brain/Vault/",
-      },
+    "obsidian-nvim/obsidian.nvim",
+    version = "*",
+    lazy = true,
+    ft = "markdown",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    opts = {
+        ui = { enable = false },
+        workspaces = {
+            {
+                name = "personal",
+                path = "~/projects/second-brain/Vault/",
+            },
+        },
+        picker = {
+            name = "snacks.pick"
+        },
+        legacy_commands = false,
     },
-    picker = {
-        name = "snacks.pick"
-    },
-    legacy_commands = false,
-  },
-  init = function()
-      vim.opt.conceallevel = 1
-  end,
+    init = function()
+        vim.opt.conceallevel = 1
+    end,
 }
