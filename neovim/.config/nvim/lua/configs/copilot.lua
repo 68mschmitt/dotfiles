@@ -1,9 +1,6 @@
-return
-{
+return {
     {
         "yetone/avante.nvim",
-        -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
-        -- ⚠️ must add this setting! ! !
         build = vim.fn.has("win32") ~= 0
         and "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource false"
         or "make",
@@ -20,7 +17,6 @@ return
             "MunifTanjim/nui.nvim",
             --- The below dependencies are optional,
             "echasnovski/mini.pick", -- for file_selector provider mini.pick
-            "hrsh7th/nvim-cmp", -- autocompletion for avante commands and mentions
             "ibhagwan/fzf-lua", -- for file_selector provider fzf
             "stevearc/dressing.nvim", -- for input provider dressing
             "folke/snacks.nvim", -- for input provider snacks
@@ -60,28 +56,15 @@ return
             end
         }, -- for providers='copilot'
         {
-            -- support for image pasting
-            "HakonHarnes/img-clip.nvim",
-            event = "VeryLazy",
-            opts = {
-                -- recommended settings
-                default = {
-                    embed_image_as_base64 = false,
-                    prompt_for_file_name = false,
-                    drag_and_drop = {
-                        insert_mode = true,
-                    },
-                    -- required for Windows users
-                    use_absolute_path = true,
-                },
-            },
-        },
-        {
             -- Make sure to set this up properly if you have lazy=true
             'MeanderingProgrammer/render-markdown.nvim',
             opts = {
                 file_types = { "markdown", "Avante" },
             },
+            dependencies = {
+                'nvim-treesitter/nvim-treesitter',
+                'echasnovski/mini.nvim'
+            }, -- if you use the mini.nvim suite
             ft = { "markdown", "Avante" },
         },
     },
@@ -97,20 +80,3 @@ return
     end
 }
 }
--- return {
-    --     "olimorris/codecompanion.nvim",
-    --     keys = {
-        --         { "<leader>ac", "<cmd>CodeCompanionChat Toggle<cr>", mode = { "n", "v" }, desc = "AI Toggle [C]hat" },
-        --         { "<leader>an", "<cmd>CodeCompanionChat<cr>", mode = { "n", "v" }, desc = "AI [N]ew Chat" },
-        --         { "<leader>aa", "<cmd>CodeCompanionActions<cr>", mode = { "n", "v" }, desc = "AI [A]ction" },
-        --         { "<leader>ga", "<cmd>CodeCompanionChat Add<CR>", mode = { "v" }, desc = "AI [A]dd to Chat" },
-        --         -- prompts
-        --         { "<leader>ae", "<cmd>CodeCompanion /explain<cr>", mode = { "v" }, desc = "AI [E]xplain" },
-        --     },
-        --     opts = {},
-        --     dependencies = {
-            --         "nvim-lua/plenary.nvim",
-            --         "nvim-treesitter/nvim-treesitter",
-            --         "github/copilot.vim",
-            --     },
-            -- }
