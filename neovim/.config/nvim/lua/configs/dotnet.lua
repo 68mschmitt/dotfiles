@@ -1,4 +1,4 @@
-return {
+local roslyn = {
     "seblyng/roslyn.nvim",
     event = { "BufReadPre", "BufNewFile" },
     opts = {
@@ -53,4 +53,8 @@ return {
             },
         })
     end,
+}
+
+return {
+    -- roslyn,
 }

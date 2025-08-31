@@ -20,11 +20,11 @@ return
                     },
                 },
                 cmd = "Mason",
-                dependencies = { "roslyn.nvim" }
+                -- dependencies = { "roslyn.nvim" }
             },
         },
     },
-    { "seblyng/nvim-lsp-extras" },
+    -- { "seblyng/nvim-lsp-extras" },
     { "b0o/schemastore.nvim", lazy = true },
     { "onsails/lspkind.nvim", lazy = true },
     {
@@ -46,12 +46,12 @@ return
         "WhoIsSethDaniel/mason-tool-installer.nvim",
         opts = {
             ensure_installed = {
-                "prettier",
-                "roslyn",
-                "lua_ls",
-                "clangd",
-                "gopls",
-                "ts_ls",
+                -- "prettier",
+                -- "roslyn",
+                -- "lua_ls",
+                -- "clangd",
+                -- "gopls",
+                -- "ts_ls",
             },
             auto_update = true,
         }

@@ -18,7 +18,7 @@ return {
             dapui.setup()
 
             require("mason-nvim-dap").setup({
-                ensure_installed = { "coreclr" },
+                -- ensure_installed = { "coreclr" },
                 handlers = {
                     function(config)
                         require("mason-nvim-dap").default_setup(config)
