@@ -13,5 +13,4 @@ REPO_SOURCES=(
   "https://github.com/D3Ext/aesthetic-wallpapers.git::images"
   "https://github.com/dharmx/walls.git"
 )
-
-WALLPAPER_SCRIPTS_DIR=/Users/michael.schmitt/.scripts/wallpaper-scripts
+WALLPAPER_SCRIPTS_DIR=/home/mschmitt/.scripts/wallpaper-scripts
