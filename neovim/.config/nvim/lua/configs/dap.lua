@@ -11,7 +11,7 @@ local dap = {
     end,
 };
 
-local mason = { "williamboman/mason.nvim" }
+local mason = { "williamboman/mason.nvim" };
 
 local mason_dap = {
     "jay-babu/mason-nvim-dap.nvim",
@@ -46,7 +46,7 @@ local mason_dap = {
             dapui.close()
         end
     end,
-},
+};
 
 return {
     dapui,
