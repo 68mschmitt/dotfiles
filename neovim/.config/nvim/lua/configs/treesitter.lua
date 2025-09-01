@@ -1,6 +1,6 @@
 local utils = require("mike.utils");
 
-return {
+local treesitter = {
     {
         'nvim-treesitter/nvim-treesitter',
         build = ":TSUpdate",
@@ -28,4 +28,8 @@ return {
         end
     },
     { 'nvim-treesitter/playground' },
+}
+
+return {
+    treesitter
 }

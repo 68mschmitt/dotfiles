@@ -1,15 +1,17 @@
-return {
+local plenary = { "nvim-lua/plenary.nvim" };
+
+local obsidian = {
     "obsidian-nvim/obsidian.nvim",
     version = "*",
     lazy = true,
     ft = "markdown",
-    dependencies = { "nvim-lua/plenary.nvim" },
+    dependencies = { plenary },
     opts = {
         ui = { enable = false },
         workspaces = {
             {
                 name = "personal",
-                path = "~/projects/second-brain/Vault/",
+                path = "~/projects/second-brain/Vault/Vault/",
             },
         },
         picker = {
@@ -20,4 +22,8 @@ return {
     init = function()
         vim.opt.conceallevel = 1
     end,
+};
+
+return {
+    obsidian
 }

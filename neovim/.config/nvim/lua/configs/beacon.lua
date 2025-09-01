@@ -1,1 +1,5 @@
-return { 'danilamihailov/beacon.nvim' }
+local beacon = { 'danilamihailov/beacon.nvim' }
+
+return {
+    beacon
+}
