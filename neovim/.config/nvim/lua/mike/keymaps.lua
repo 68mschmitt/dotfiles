@@ -1,6 +1,3 @@
--- Experimenting with friction
-vim.api.nvim_set_keymap("i", "<C-n><C-n>", "<Esc>o", { noremap = true, silent = true })
-
 -- Clear search highlights and close the quickfix window
 vim.api.nvim_set_keymap("n", "<Esc>", "<cmd>noh<cr><cmd>cclose<cr>", { noremap = true, silent = true })
 

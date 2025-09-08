@@ -22,7 +22,7 @@ local snacks = {
         image = { enabled = true },
         input = { enabled = true },
         scratch = { enabled = true },
-        scroll = { enabled = true },
+        scroll = { enabled = false },
         words = { enabled = true },
         terminal = { enabled = true },
 
