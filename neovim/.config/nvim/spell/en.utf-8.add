@@ -254,6 +254,7 @@ addons
 setHostnameAsFQDN
 AAAA
 SRV
+<<<<<<< Updated upstream
 =======
 Ansible
 Proxmox
@@ -277,4 +278,15 @@ HCL
 IaC
 HashiCorp
 Graphana
+>>>>>>> Stashed changes
+=======
+Runit
+Systemd
+BusyBox
+Noam
+Mau
+MUI
+Zsh
+TODO
+isNewApiEnabled
 >>>>>>> Stashed changes
