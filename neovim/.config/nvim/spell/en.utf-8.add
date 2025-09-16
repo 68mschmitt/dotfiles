@@ -311,3 +311,6 @@ th
 NL
 keypress
 Cygwin
+C99
+malloc
+VLAs
