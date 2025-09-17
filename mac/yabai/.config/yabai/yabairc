@@ -1,6 +1,16 @@
 # bsp or float (default: float)
 yabai -m config layout bsp
 
+# Set all padding and gaps to 20pt (default: 0)
+yabai -m config top_padding    50
+yabai -m config bottom_padding 20
+yabai -m config left_padding   20
+yabai -m config right_padding  20
+yabai -m config window_gap     20
+
+# Override gaps for space 2 only
+# yabai -m config --space 2 window_gap 0
+
 # Override default layout for space 2 only
 # yabai -m config --space 2 layout float
 

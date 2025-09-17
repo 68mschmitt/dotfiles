@@ -314,3 +314,6 @@ Cygwin
 C99
 malloc
 VLAs
+Minix
+Mongo
+HashTable
