@@ -314,6 +314,7 @@ Cygwin
 C99
 malloc
 VLAs
+<<<<<<< Updated upstream
 Minix
 Mongo
 HashTable
@@ -383,3 +384,7 @@ pybind11
 fmt
 opencl
 v3
+=======
+HashTable
+Kinsley
+>>>>>>> Stashed changes
