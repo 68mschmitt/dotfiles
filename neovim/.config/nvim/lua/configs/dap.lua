@@ -1,23 +1,23 @@
-local dapui =
+local dapuiImport =
 {
     "rcarriga/nvim-dap-ui",
     dependencies = { "nvim-neotest/nvim-nio" }
 };
 
-local dap = {
+local dapImport = {
     "mfussenegger/nvim-dap",
     config = function()
         -- Optional: dap keymaps here
     end,
 };
 
-local mason = { "williamboman/mason.nvim" };
+local masonImport = { "williamboman/mason.nvim" };
 
-local mason_dap = {
+local mason_dapImport = {
     "jay-babu/mason-nvim-dap.nvim",
     dependencies = {
-        mason,
-        dap
+        masonImport,
+        dapImport
     },
     config = function()
         local dap, dapui = require("dap"), require("dapui")
@@ -25,7 +25,8 @@ local mason_dap = {
         dapui.setup()
 
         require("mason-nvim-dap").setup({
-            -- ensure_installed = { "coreclr" },
+            automatic_installation = false,
+            ensure_installed = { "coreclr" },
             handlers = {
                 function(config)
                     require("mason-nvim-dap").default_setup(config)
@@ -49,7 +50,7 @@ local mason_dap = {
 };
 
 return {
-    dapui,
-    dap,
-    mason_dap
+    -- dapuiImport,
+    -- dapImport,
+    -- mason_dapImport
 }

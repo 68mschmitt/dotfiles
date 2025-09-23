@@ -384,7 +384,17 @@ pybind11
 fmt
 opencl
 v3
+<<<<<<< Updated upstream
 =======
 HashTable
 Kinsley
+>>>>>>> Stashed changes
+=======
+Pywall
+PixiJS
+XState
+Leitner
+Linter
+HTML5
+WebGL
 >>>>>>> Stashed changes

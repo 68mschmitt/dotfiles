@@ -1,5 +1,8 @@
--- Clear search highlights and close the quickfix window
+-- Close the quickfix window
 vim.api.nvim_set_keymap("n", "<Esc>", "<cmd>noh<cr><cmd>cclose<cr>", { noremap = true, silent = true })
+
+-- Clear word highlighting
+vim.api.nvim_set_keymap("n", "<leader>nh", "<cmd>noh<cr>", { noremap = true, silent = true })
 
 -- QOL
 vim.api.nvim_set_keymap("n", "<C-s>", "<cmd>w<cr>", { noremap = true, silent = true })

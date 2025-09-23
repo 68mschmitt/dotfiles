@@ -40,8 +40,6 @@ local avante = {
     or "make",
     event = "VeryLazy",
     version = false, -- Never set this value to "*"! Never!
-    ---@module 'avante'
-    ---@type avante.Config
     opts = {
         provider = "copilot",
         auto_suggestions_provider = nil,

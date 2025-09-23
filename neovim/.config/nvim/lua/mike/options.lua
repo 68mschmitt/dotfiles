@@ -40,3 +40,5 @@ vim.opt.timeoutlen = 300
 -- split windows
 vim.opt.splitright = true
 vim.opt.splitbelow = true
+
+vim.o.tabline = '%!v:lua.MyTabLine()'

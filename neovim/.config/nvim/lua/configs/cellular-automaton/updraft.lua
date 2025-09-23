@@ -18,7 +18,7 @@ local swap_cells = function(grid, x1, y1, x2, y2)
   grid[x1][y1], grid[x2][y2] = grid[x2][y2], grid[x1][y1]
 end
 
-M.init = function(grid)
+M.init = function()
   frame = 1
 end
 

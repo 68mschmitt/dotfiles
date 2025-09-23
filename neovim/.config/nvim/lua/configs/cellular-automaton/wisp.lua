@@ -107,12 +107,12 @@ M.update = function(grid)
       local t_ratio = 1 - (i - 1) / M.tail_length
       local taper_radius = math.floor(diameter / 2 * t_ratio)
 
-      for dx = -taper_radius, taper_radius do
-        for dy = -taper_radius, taper_radius do
-          local tx = pos.x + dx
-          local ty = pos.y + dy
+      for dxt = -taper_radius, taper_radius do
+        for dyt = -taper_radius, taper_radius do
+          local tx = pos.x + dxt
+          local ty = pos.y + dyt
           if tx > 0 and tx <= height and ty > 0 and ty <= width then
-            local dist2 = dx * dx + dy * dy
+            local dist2 = dxt * dxt + dyt * dyt
             if dist2 <= taper_radius * taper_radius then
               grid[tx][ty].char = tchar
             end

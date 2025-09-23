@@ -15,16 +15,16 @@ return {
 
         -- Disable/Enable diagnostics
         vim.keymap.set('n', '<leader>dis',
-        function()
-            vim.diagnostic.enable(not vim.diagnostic.is_enabled())
-            local message = "Diagnostics: "
-            if vim.diagnostic.is_enabled() then
-                message = message .. "Enabled"
-            else
-                message = message .. "Disabled"
+            function()
+                vim.diagnostic.enable(not vim.diagnostic.is_enabled())
+                local message = "Diagnostics: "
+                if vim.diagnostic.is_enabled() then
+                    message = message .. "Enabled"
+                else
+                    message = message .. "Disabled"
+                end
+                vim.notify(message)
             end
-            vim.notify(message)
-        end
-        , opts)
+            , opts)
     end
 }

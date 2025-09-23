@@ -7,7 +7,6 @@ local blink = {
     dependencies = {
         luasnip,
         friendly_snippets,
-        lspkind_plugin
     },
     version = '*',
     opts = {

@@ -2,7 +2,7 @@ local lspconfig = { "neovim/nvim-lspconfig" };
 
 local mason = {
     "mason-org/mason.nvim",
-    opts = 
+    opts =
     {
         registries = {
             "github:mason-org/mason-registry",
@@ -12,9 +12,9 @@ local mason = {
     cmd = "Mason",
 };
 
-local mason = {
+local masonLspconfig = {
     "mason-org/mason-lspconfig.nvim",
-    opts = { 
+    opts = {
         handlers = { vim.lsp.enable },
     },
     event = { "BufReadPre", "BufNewFile" },
@@ -46,7 +46,7 @@ local lazydev = {
 
 return {
     mason,
+    masonLspconfig,
     schemastore,
-    lspkind,
     lazydev
 }

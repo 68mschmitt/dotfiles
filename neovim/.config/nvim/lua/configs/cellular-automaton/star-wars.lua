@@ -32,7 +32,7 @@ local scene = {
   "                      ",
 }
 
-M.init = function(grid)
+M.init = function()
   frame = 0
 end
 
