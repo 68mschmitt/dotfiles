@@ -4,6 +4,12 @@ cmd - return : open -n -a Ghostty
 # Open Browser (Chrome)
 cmd - b : open -n -a "Google Chrome"
 
+# Change Wallpaper
+cmd + ctrl - w : cd /Users/michael.schmitt/.scripts/wallpaper-scripts/ && ./set-random-wallpaper.sh
+
+# Blacklist Wallpaper
+cmd + ctrl - b : cd /Users/michael.schmitt/.scripts/wallpaper-scripts/ && ./blacklist-wallpaper.sh
+
 # Yabai
 cmd - up : yabai -m window --focus north
 cmd - down : yabai -m window --focus south
