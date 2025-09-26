@@ -43,7 +43,9 @@ random_image="${images[RANDOM % ${#images[@]}]}"
 uname_out="$(uname)"
 case "$uname_out" in
     Darwin)
-        osascript -e "tell application \"System Events\" to tell every desktop to set picture to POSIX file \"$random_image\""
+        # desktoppr $random_image
+        osascript -e "tell application \"System Events\" to tell every desktop to set picture to \"$random_image\" as POSIX file"
+        # osascript -e "tell application \"System Events\" to tell every desktop to set picture to POSIX file \"$random_image\""
         ;;
     Linux)
         feh --bg-scale "$random_image"
