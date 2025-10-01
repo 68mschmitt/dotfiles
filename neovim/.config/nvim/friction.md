@@ -10,3 +10,11 @@
     - `:let @" = expand("%")`
     - Remap to keystroke
     - `:nmap cp :let @" = expand("%")<cr>`
+
+- Creating notes for memory palace
+    - Ideas
+        - Create snippets to output defaults
+
+- When I paste directly from the register, the formatting is really weird
+
+- How to view full error message in popup window that comes up with <leader>n

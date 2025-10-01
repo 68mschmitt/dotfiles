@@ -84,5 +84,5 @@ return {
     -- copilot,
     -- avante,
     -- mcphub,
-    render_markdown,
+    -- render_markdown,
 }

@@ -31,26 +31,4 @@ M.isWindows = function()
     return platform == "Windows_NT"
 end
 
-    -- In your Lua configuration file (e.g., init.lua or a separate module)
-M.MyTabLine = function()
-    local s = ''
-    for i = 1, vim.fn.tabpagenr('$') do
-        local buflist = vim.fn.tabpagebuflist(i)
-        local winnr = vim.fn.tabpagewinnr(i)
-        local bufname = vim.fn.bufname(buflist[winnr])
-        local filename = vim.fn.fnamemodify(bufname, ':t') -- Get only the filename
-
-        local tab_label = filename ~= '' and filename or '[No Name]'
-
-        if i == vim.fn.tabpagenr() then
-            s = s .. '%#TabLineSel#' -- Highlight selected tab
-        else
-            s = s .. '%#TabLine#' -- Default tab highlight
-        end
-
-        s = s .. ' %' .. i .. 'T' .. tab_label .. ' %X'
-    end
-    return s
-end
-
 return M
