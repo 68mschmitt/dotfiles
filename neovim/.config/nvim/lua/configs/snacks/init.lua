@@ -19,7 +19,7 @@ local snacks = {
         notifier = { enabled = true, timeout = 3000 },
         notify = { enabled = true },
         explorer = { enabled = true, replace_netrw = true },
-        image = { enabled = true, doc = { float = false, inline = true } },
+        image = { enabled = true },
         input = { enabled = true },
         scratch = { enabled = true },
         scroll = { enabled = false },

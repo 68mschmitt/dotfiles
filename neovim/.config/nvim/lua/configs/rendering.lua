@@ -19,14 +19,14 @@ local image_nvim = {
 local render_markdown = {
     "MeanderingProgrammer/render-markdown.nvim",
     ft = { "markdown" },
-    opts = {
-        mermaid = {
-            enabled = true,
-            options = { "--scale", "2", "-b", "transparent", "-t", "dark" }
-        }
-    },
+    -- opts = {
+    --     mermaid = {
+    --         enabled = true,
+    --         options = { "--scale", "2", "-b", "transparent", "-t", "dark" }
+    --     }
+    -- },
     dependencies = {
-        image_nvim,
+        -- image_nvim,
         "nvim-treesitter/nvim-treesitter",
     },
 }
