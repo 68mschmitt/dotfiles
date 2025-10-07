@@ -32,5 +32,5 @@ local render_markdown = {
 }
 
 return {
-    render_markdown,
+    -- render_markdown,
 }
