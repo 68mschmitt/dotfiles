@@ -22,11 +22,12 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
 -- Setup lazy.nvim
-require("lazy").setup({
-    spec = {
-        -- import your plugins
-        { import = "configs" },
+require("lazy").setup("configs", {
+    dev = {
+        path = vim.fs.joinpath(os.getenv("HOME"), "projects", "plugins"),
+        fallback = true,
     },
     -- automatically check for plugin updates
     checker = { enabled = false },
+    change_detection = { notify = false },
 })
