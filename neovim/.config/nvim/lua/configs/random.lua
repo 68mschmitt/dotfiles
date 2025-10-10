@@ -19,6 +19,7 @@ local cellular_automaton = {
         require('configs.cellular-automaton.ripple')
         require('configs.cellular-automaton.blackhole')
         require("configs.cellular-automaton.snowtown").register()
+        require("configs.cellular-automaton.runner").register()
         require("cellular-automaton").register_animation(require('configs.cellular-automaton.updraft'))
         require("cellular-automaton").register_animation(require('configs.cellular-automaton.ember-rise'))
         require("cellular-automaton").register_animation(require('configs.cellular-automaton.glitch_drift'))
