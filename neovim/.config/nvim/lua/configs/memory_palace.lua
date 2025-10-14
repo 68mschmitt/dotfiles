@@ -1,5 +1,6 @@
 local note_templates = {
-    profile = "# {{title}}\n{{datetime}}\n---\n\n# Personal\n\n# Professional\n\n---\n\n# Follow Up Questions",
+    profile = "# {{title}}\n{{datetime}}\n---\n\n# Personal\n\n{{content}}\n\n# Professional\n\n---\n\n# Follow Up Questions",
+    distill = "# {{title}}\n{{datetime}}\n---\n\n{{content}}\n\n# Summarize / Distillation\n---\n- Key takeaways\n- Insights or questions\n- Actions to take\n- Cross-references",
 }
 
 local memory_palace = {
