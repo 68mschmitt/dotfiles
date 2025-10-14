@@ -87,4 +87,10 @@ config.update = function(grid)
   return true  -- keep animating
 end
 
-ca.register_animation(config)
+local M = {}
+
+function M.register()
+  ca.register_animation(config)
+end
+
+return M

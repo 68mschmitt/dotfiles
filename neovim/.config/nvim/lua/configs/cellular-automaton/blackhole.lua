@@ -179,7 +179,7 @@ cfg.update = function(grid)
       local r0 = dist(x0, y0)
 
       if r0 < 1e-9 then
-        -- If it somehow starts at center, it’s immediately swallowed
+        -- If it somehow starts at center, it's immediately swallowed
         p.state = "done"
         swallowed = swallowed + 1
       else
@@ -237,4 +237,10 @@ cfg.update = function(grid)
   return true
 end
 
-ca.register_animation(cfg)
+local M = {}
+
+function M.register()
+  ca.register_animation(cfg)
+end
+
+return M

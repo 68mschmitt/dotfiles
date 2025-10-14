@@ -125,5 +125,9 @@ M.update = function(grid)
   return true
 end
 
+function M.register()
+  require("cellular-automaton").register_animation(M)
+end
+
 return M
 

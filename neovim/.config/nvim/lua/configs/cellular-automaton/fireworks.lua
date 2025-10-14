@@ -141,4 +141,10 @@ local config = {
   end,
 }
 
-require("cellular-automaton").register_animation(config)
+local M = {}
+
+function M.register()
+  require("cellular-automaton").register_animation(config)
+end
+
+return M

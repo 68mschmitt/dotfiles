@@ -124,4 +124,10 @@ cfg.update = function(grid)
   return true
 end
 
-ca.register_animation(cfg)
+local M = {}
+
+function M.register()
+  ca.register_animation(cfg)
+end
+
+return M

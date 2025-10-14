@@ -88,4 +88,10 @@ cfg.update = function(grid)
     return true
 end
 
-require("cellular-automaton").register_animation(cfg)
+local M = {}
+
+function M.register()
+    require("cellular-automaton").register_animation(cfg)
+end
+
+return M
