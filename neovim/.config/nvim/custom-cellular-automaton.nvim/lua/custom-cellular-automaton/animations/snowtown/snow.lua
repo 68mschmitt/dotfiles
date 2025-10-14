@@ -1,4 +1,4 @@
-local U = require("configs.cellular-automaton.snowtown.util")
+local U = require("custom-cellular-automaton.animations.snowtown.util")
 
 local Snow = {}
 

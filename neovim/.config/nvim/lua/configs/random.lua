@@ -7,25 +7,12 @@ local tetris =
     end
 };
 
-local cellular_automaton = {
-    'eandrju/cellular-automaton.nvim',
+local custom_cellular_automaton = {
+    dir = vim.fn.stdpath("config") .. "/custom-cellular-automaton.nvim",
+    dependencies = { 'eandrju/cellular-automaton.nvim' },
     lazy = false,
     config = function()
-        require('configs.cellular-automaton.horizontal-slide').register()
-        require('configs.cellular-automaton.slide-left').register()
-        require('configs.cellular-automaton.fireworks').register()
-        require('configs.cellular-automaton.matrix').register()
-        require('configs.cellular-automaton.snowfall').register()
-        require('configs.cellular-automaton.ripple').register()
-        require('configs.cellular-automaton.blackhole').register()
-        require("configs.cellular-automaton.snowtown").register()
-        require("configs.cellular-automaton.runner").register()
-        require('configs.cellular-automaton.updraft').register()
-        require('configs.cellular-automaton.ember-rise').register()
-        require('configs.cellular-automaton.glitch_drift').register()
-        require('configs.cellular-automaton.star-wars').register()
-        require('configs.cellular-automaton.wisp').register()
-        require('configs.cellular-automaton.inferno').register()
+        require('custom-cellular-automaton').setup()
         vim.keymap.set("n", "<leader>mir", function() vim.cmd([[CellularAutomaton make_it_rain]]) end )
         vim.keymap.set("n", "<leader>sbl", function() vim.cmd([[CellularAutomaton scramble]]) end )
         vim.keymap.set("n", "<leader>gol", function() vim.cmd([[CellularAutomaton game_of_life]]) end )
@@ -44,6 +31,6 @@ local donut = {
 
 return {
     tetris,
-    cellular_automaton,
+    custom_cellular_automaton,
     -- donut
 }

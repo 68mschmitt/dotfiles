@@ -1,9 +1,9 @@
 local ca       = require("cellular-automaton")
-local U        = require("configs.cellular-automaton.snowtown.util")
-local Items    = require("configs.cellular-automaton.snowtown.items")
-local Place    = require("configs.cellular-automaton.snowtown.placement")
-local SnowMod  = require("configs.cellular-automaton.snowtown.snow")
-local Spawner  = require("configs.cellular-automaton.snowtown.spawner")
+local U        = require("custom-cellular-automaton.animations.snowtown.util")
+local Items    = require("custom-cellular-automaton.animations.snowtown.items")
+local Place    = require("custom-cellular-automaton.animations.snowtown.placement")
+local SnowMod  = require("custom-cellular-automaton.animations.snowtown.snow")
+local Spawner  = require("custom-cellular-automaton.animations.snowtown.spawner")
 
 local A = {}
 

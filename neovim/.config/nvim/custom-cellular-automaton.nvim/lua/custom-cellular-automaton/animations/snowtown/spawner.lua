@@ -1,4 +1,4 @@
-local Items = require("configs.cellular-automaton.snowtown.items")
+local Items = require("custom-cellular-automaton.animations.snowtown.items")
 
 local S = {}
 
@@ -17,7 +17,7 @@ function S.new(opts)
     cursor = 1,
   }
 
-  for i, it in ipairs(require("configs.cellular-automaton.snowtown.items").catalog) do
+  for i, it in ipairs(require("custom-cellular-automaton.animations.snowtown.items").catalog) do
     o.enabled[it.name] = true
     table.insert(o.order, i)
     o.counts[it.name] = 0

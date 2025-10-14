@@ -1,5 +1,5 @@
-local U = require("configs.cellular-automaton.snowtown.util")
-local Items = require("configs.cellular-automaton.snowtown.items")
+local U = require("custom-cellular-automaton.animations.snowtown.util")
+local Items = require("custom-cellular-automaton.animations.snowtown.items")
 
 local P = {}
 
