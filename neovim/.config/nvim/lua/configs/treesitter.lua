@@ -27,7 +27,6 @@ local treesitter = {
             })
         end
     },
-    { 'nvim-treesitter/playground' },
 }
 
 return {

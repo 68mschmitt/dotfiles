@@ -9,11 +9,7 @@ local snacks = {
         picker = { enabled = true,
         ui_select = true, sources =
         {
-            explorer = { ignored = true, hidden = true, layout = { layout = { position = "right" } } } },
-            files = { ignored = true, hidden = true },
-            grep = { ignored = true, hidden = true },
-            grep_word = { ignored = true, hidden = true },
-            grep_buffers = { ignored = true, hidden = true }
+            explorer = { layout = { layout = { position = "right" } } } },
         },
         dashboard = require('configs.snacks.dashboard').options(true),
         notifier = { enabled = true, timeout = 3000 },

@@ -1,19 +1,4 @@
-local augroup = vim.api.nvim_create_augroup
-
 local M = {}
-
-M.augroups = {
-    mike = augroup("MikeAuGroup", { clear = true }),
-	filetype = augroup("UserFileType", {}),
-	yank = augroup("UserYank", {}),
-	windows = augroup("UserWindows", {}),
-	lsp = {
-		attach = augroup("UserLspAttach", {}),
-		detach = augroup("UserLspDetach", {}),
-		efm = augroup("UserLspEfm", {}),
-		highlight = augroup("UserLspHighlight", {}),
-	},
-}
 
 M.DebugLsp = function(level)
     if (level == 0) then
