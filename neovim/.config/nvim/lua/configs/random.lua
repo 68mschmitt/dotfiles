@@ -8,7 +8,8 @@ local tetris =
 };
 
 local custom_cellular_automaton = {
-    dir = vim.fn.stdpath("config") .. "/custom-cellular-automaton.nvim",
+    '68mschmitt/custom-cellular-automata.nvim',
+    dev = true,
     dependencies = { 'eandrju/cellular-automaton.nvim' },
     lazy = false,
     config = function()
