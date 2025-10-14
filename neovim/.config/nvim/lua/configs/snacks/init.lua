@@ -6,10 +6,19 @@ local snacks = {
     ---@type snacks.Config
     opts = {
         animate = { enabled = true },
-        picker = { enabled = true,
-        ui_select = true, sources =
-        {
-            explorer = { layout = { layout = { position = "right" } } } },
+        picker = {
+            enabled = true,
+            ui_select = true,
+            sources =
+            {
+                explorer = {
+                    layout = {
+                        layout = {
+                            position = "right"
+                        }
+                    }
+                },
+            },
         },
         dashboard = require('configs.snacks.dashboard').options(true),
         notifier = { enabled = true, timeout = 3000 },
