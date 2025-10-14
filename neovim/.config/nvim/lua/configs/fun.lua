@@ -22,16 +22,7 @@ local custom_cellular_automaton = {
     end
 };
 
-local donut = {
-    'NStefan002/donut.nvim',
-    lazy = false,
-    init = function()
-        vim.keymap.set("n", "<leader>tet", function() vim.cmd([[Tetris]]) end )
-    end
-};
-
 return {
     tetris,
     custom_cellular_automaton,
-    -- donut
 }
