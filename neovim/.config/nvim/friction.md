@@ -6,11 +6,6 @@
 
 - Center page when using <C-d> and <C-u>
 
-- Yank the current file buffer full path into the default register
-    - `:let @" = expand("%")`
-    - Remap to keystroke
-    - `:nmap cp :let @" = expand("%")<cr>`
-
 - When I paste directly from the register, the formatting is really weird
 
-- How to view full error message in popup window that comes up with <leader>n
+- Automatically spell correct a word instead of having to do `z=1<cr>`

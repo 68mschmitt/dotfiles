@@ -1,6 +1,6 @@
 require("mike.options")
-require("mike.keymaps")
 require('mike.lazy')
 require("mike.autocmd")
 require("mike.statusline")
 vim.cmd([[colorscheme carbonfox]])
+require("mike.keymaps")

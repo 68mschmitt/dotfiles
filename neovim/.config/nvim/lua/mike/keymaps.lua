@@ -1,3 +1,6 @@
+-- Copy the current buffer file name to the default register
+vim.keymap.set("n", "<leader>nf", "<cmd>let @\" = expand(\"%:t\")\"<cr>", { noremap = true, silent = true })
+
 -- Close the quickfix window
 vim.keymap.set("n", "<Esc>", "<cmd>noh<cr><cmd>cclose<cr>", { noremap = true, silent = true })
 

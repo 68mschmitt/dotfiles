@@ -23,9 +23,9 @@ local memory_palace = {
 local dirquest = {
     '68mschmitt/dirquest.nvim',
     dev = true,
-    lazy = false,
 }
 
 return {
-    memory_palace
+    memory_palace,
+    dirquest
 }
