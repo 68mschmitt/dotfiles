@@ -10,7 +10,7 @@ local tetris =
 local custom_cellular_automaton = {
     '68mschmitt/custom-cellular-automata.nvim',
     dev = true,
-    dependencies = { 'eandrju/cellular-automaton.nvim' },
+    dependencies = { '68mschmitt/cellular-automaton.nvim', dev = true },
     lazy = false,
     config = function()
         require('custom-cellular-automaton').setup()
