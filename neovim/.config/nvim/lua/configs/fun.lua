@@ -34,18 +34,7 @@ local wowmode = {
     end
 }
 
-local devdocs_client = {
-    "luckasRanarison/nvim-devdocs",
-    dependencies = {
-        "nvim-lua/plenary.nvim",
-        "nvim-telescope/telescope.nvim",
-        "nvim-treesitter/nvim-treesitter",
-    },
-    opts = {}
-}
-
 return {
     tetris,
     custom_cellular_automaton,
-    devdocs_client,
 }
