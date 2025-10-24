@@ -465,6 +465,7 @@ Refspec
 Packfiles
 powershell
 xfce
+<<<<<<< Updated upstream
 Biolinguistics
 OpenSUSE
 CentOS
@@ -473,3 +474,6 @@ Omarchy
 CachyOS
 incrementor
 decrementor
+=======
+GPT
+>>>>>>> Stashed changes
