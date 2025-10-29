@@ -16,7 +16,9 @@ local snacks = {
                         layout = {
                             position = "right"
                         }
-                    }
+                    },
+                    filter = { hidden = true },
+                    hidden = true,
                 },
             },
         },
