@@ -69,4 +69,4 @@ vim.keymap.set("n", "<leader>cb", "<cmd>bdel!<cr>", { noremap = true, silent = t
 -- Manual lint trigger
 vim.keymap.set("n", "<leader>ll", function()
     require("lint").try_lint()
-end, { noremap = true, silent = true })
+end, { noremap = true, silent = true, desc = "Lint current buffer" })
