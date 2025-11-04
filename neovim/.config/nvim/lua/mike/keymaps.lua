@@ -70,3 +70,8 @@ vim.keymap.set("n", "<leader>cb", "<cmd>bdel!<cr>", { noremap = true, silent = t
 vim.keymap.set("n", "<leader>ll", function()
     require("lint").try_lint()
 end, { noremap = true, silent = true, desc = "Lint current buffer" })
+
+-- Auto-correct spelling to first suggestion
+vim.keymap.set("n", "z/", function()
+    vim.cmd('normal 1z=')
+end, { noremap = true, silent = true, desc = "Auto-correct word to first suggestion" })
