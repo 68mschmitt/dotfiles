@@ -50,6 +50,7 @@ local linter = {
         -- Using nvim-lint's built-in linter names
         lint.linters_by_ft = {
             markdown = { "write_good" },
+            typescript = { "biomejs" },
             -- Add more linters as needed:
             -- python = { "pylint" },
             -- lua = { "luacheck" },
