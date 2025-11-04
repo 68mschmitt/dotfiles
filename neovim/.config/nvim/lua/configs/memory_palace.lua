@@ -34,15 +34,11 @@ local thoughtworks = {
     opts = {
         root_dir = vim.fn.expand("~/projects/second-brain/thoughtworks"),
         inbox_dir = "inbox",
-        keymaps = {
-            enabled = true,
-            prefix = "<leader>n",
-        }
     },
 }
 
 return {
-    -- memory_palace,
+    memory_palace,
     dirquest,
-    thoughtworks
+    thoughtworks,
 }

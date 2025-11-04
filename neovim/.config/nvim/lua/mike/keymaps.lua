@@ -65,3 +65,8 @@ vim.keymap.set("n", "<A-p>", "<cmd>cprev<cr>", { noremap = true, silent = true }
 
 -- Close a buffer
 vim.keymap.set("n", "<leader>cb", "<cmd>bdel!<cr>", { noremap = true, silent = true })
+
+-- Manual lint trigger
+vim.keymap.set("n", "<leader>ll", function()
+    require("lint").try_lint()
+end, { noremap = true, silent = true })
