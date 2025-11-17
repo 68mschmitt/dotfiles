@@ -22,18 +22,6 @@ local custom_cellular_automaton = {
     end
 };
 
-local wowmode = {
-    "68mschmitt/wowmode.nvim",
-    dev = true,
-    config = function()
-        require("wowmode").preset("presentation") -- or "subtle" / default
-        require("wowmode").start()
-        -- map quick toggle
-        vim.keymap.set("n", "<leader>wo", "<cmd>WowStart<cr>")
-        vim.keymap.set("n", "<leader>wx", "<cmd>WowStop<cr>")
-    end
-}
-
 return {
     tetris,
     custom_cellular_automaton,

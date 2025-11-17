@@ -1,3 +1,5 @@
+-- Personal Knowledge Management
+
 local note_templates = {
     profile =
     "# {{title}}\n{{datetime}}\n---\n\n# Personal\n\n{{content}}\n\n# Professional\n\n---\n\n# Follow Up Questions",
@@ -5,8 +7,8 @@ local note_templates = {
     "# {{title}}\n{{datetime}}\n---\n\n{{content}}\n\n# Summarize / Distillation\n---\n- Key takeaways\n- Insights or questions\n- Actions to take\n- Cross-references",
 }
 
-local memory_palace = {
-    '68mschmitt/memory-palace.nvim',
+local katasync = {
+    '68mschmitt/katasync.nvim',
     dev = true,
     lazy = false,
     cmd = { "NewNote", "SortNote" },
@@ -16,29 +18,18 @@ local memory_palace = {
         { "<leader>ns", "<cmd>SortNote<cr>",   desc = "Sort/move note" },
     },
     opts = {
-        base_dir  = "~/projects/second-brain/Vault/Vault/MemoryPalaceRPG/Islands",
-        inbox_dir = "~/projects/second-brain/Vault/Vault/MemoryPalaceRPG/Islands/00-Tutorial-Island/tutorial-pen",
+        base_dir  = "~/projects/second-brain/thoughtworks",
+        inbox_dir = "~/projects/second-brain/thoughtworks/inbox",
         templates = note_templates,
     },
 }
 
-local dirquest = {
-    '68mschmitt/dirquest.nvim',
-    dev = true,
-}
-
-local thoughtworks = {
-    '68mschmitt/thoughtworks.nvim',
-    dev = true,
-    lazy = false,
-    opts = {
-        root_dir = vim.fn.expand("~/projects/second-brain/thoughtworks"),
-        inbox_dir = "inbox",
-    },
+local render_markdown = {
+    'MeanderingProgrammer/render-markdown.nvim',
+    dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons
 }
 
 return {
-    memory_palace,
-    dirquest,
-    thoughtworks,
+    katasync,
+    render_markdown,
 }
