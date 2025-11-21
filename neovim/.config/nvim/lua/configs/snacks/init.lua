@@ -17,8 +17,13 @@ local snacks = {
                             position = "right"
                         }
                     },
-                    filter = { hidden = true },
+                    filter = { hidden = true, ignored = false },
                     hidden = true,
+                    ignored = true,
+                },
+                files = {
+                    hidden = true,
+                    ignored = true,
                 },
             },
         },
