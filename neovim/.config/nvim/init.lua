@@ -7,10 +7,7 @@ require("mike.keymaps")
 
 -- Custom Autocenter for Note
 require("mike.autocenter").setup({
-  enabled = false,
-  updatetime = 250,
-  cooldown_ms = 400,
-  align = "zz",       -- or "zt"
+  enabled = false,  -- start disabled
+  align = "zz",     -- or "zt"
   keymap = "<leader>uz",
 })
-
