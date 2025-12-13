@@ -75,3 +75,14 @@ end, { noremap = true, silent = true, desc = "Lint current buffer" })
 vim.keymap.set("n", "z/", function()
     vim.cmd('normal 1z=')
 end, { noremap = true, silent = true, desc = "Auto-correct word to first suggestion" })
+
+local function wrap(lhs, open, close)
+  close = close or open
+
+  vim.keymap.set("n", lhs, string.format('ciw%s<C-r>"%s<Esc>', open, close))
+  vim.keymap.set("v", lhs, string.format('c%s<C-r>"%s<Esc>', open, close))
+end
+
+wrap("<leader>`", "`")
+wrap("<leader>'", "'")
+wrap('<leader>"', '"')
