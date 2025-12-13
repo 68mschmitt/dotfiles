@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/.git-autocommit.conf"
 
 # Default configuration values
-MODEL="qwen2.5-coder:14b"
+MODEL="qwen2.5-coder:7b"
 MAX_DIFF_LINES=500
 MAX_CONTEXT_CHARS=8000
 OLLAMA_API_URL="http://localhost:11434/api/generate"
