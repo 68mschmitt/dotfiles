@@ -11,3 +11,5 @@ require("mike.autocenter").setup({
   align = "zz",     -- or "zt"
   keymap = "<leader>uz",
 })
+
+require("mike.surround_wrap").setup()
