@@ -5,8 +5,8 @@ require("mike.statusline")
 vim.cmd([[colorscheme carbonfox]])
 require("mike.keymaps")
 
--- Custom Autocenter for Note
-require("mike.autocenter").setup({
+-- Note Mode: Auto-center + Auto-wrap for note-taking
+require("mike.note-mode").setup({
   enabled = false,  -- start disabled
   align = "zz",     -- or "zt"
   keymap = "<leader>uz",
