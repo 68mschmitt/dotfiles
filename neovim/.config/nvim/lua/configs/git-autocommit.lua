@@ -60,7 +60,6 @@ function State:new()
         buffers = {},
         temp_files = {},
         active = false,
-        progress_timer = nil,
         commit_message_buf = nil,
         captured_message = nil,  -- Store edited message before prompt
     }, self)
@@ -78,19 +77,7 @@ function State:add_temp_file(file)
     table.insert(self.temp_files, file)
 end
 
-function State:stop_progress_timer()
-    if self.progress_timer then
-        pcall(function()
-            self.progress_timer:stop()
-            self.progress_timer:close()
-        end)
-        self.progress_timer = nil
-    end
-end
-
 function State:cleanup()
-    self:stop_progress_timer()
-
     for _, win in ipairs(self.windows) do
         if vim.api.nvim_win_is_valid(win) then
             pcall(vim.api.nvim_win_close, win, true)
@@ -124,8 +111,6 @@ end
 
 function State:cleanup_ui_only()
     -- Clean UI but preserve attempt, diff, guidance for regeneration
-    self:stop_progress_timer()
-
     for _, win in ipairs(self.windows) do
         if vim.api.nvim_win_is_valid(win) then
             pcall(vim.api.nvim_win_close, win, true)
@@ -150,39 +135,6 @@ local state = State:new()
 -- ============================================================================
 -- UTILITY FUNCTIONS
 -- ============================================================================
-
--- Progress indicator with spinning animation
-local function show_progress(message)
-    if not config.show_progress then return end
-
-    state:stop_progress_timer()
-
-    local frames = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏' }
-    local current_frame = 1
-
-    local function update_progress()
-        local frame = frames[current_frame]
-        vim.schedule(function()
-            vim.notify(
-                message .. " " .. frame,
-                vim.log.levels.INFO,
-                { replace = true, key = 'git_autocommit_progress' }
-            )
-        end)
-        current_frame = (current_frame % #frames) + 1
-    end
-
-    update_progress()
-    state.progress_timer = vim.uv.new_timer()
-    state.progress_timer:start(0, 100, update_progress)
-end
-
-local function hide_progress()
-    state:stop_progress_timer()
-    vim.schedule(function()
-        vim.notify("", vim.log.levels.INFO, { replace = true, key = 'git_autocommit_progress' })
-    end)
-end
 
 -- Word-wrapping that respects boundaries
 local function wrap_text(text, width)
@@ -519,8 +471,6 @@ local function call_ollama_with_retry(prompt, attempt, callback)
         end)
     end
 
-    show_progress("Generating commit message with " .. config.model)
-
     -- Build payload
     local payload = vim.json.encode({
         model = config.model,
@@ -564,7 +514,6 @@ local function call_ollama_with_retry(prompt, attempt, callback)
                         if done == false then
                             -- Parse error, abort
                             vim.schedule(function()
-                                hide_progress()
                                 vim.notify("Streaming parse error, retrying without streaming...", vim.log.levels.WARN)
                             end)
                             -- Retry with streaming disabled
@@ -579,8 +528,6 @@ local function call_ollama_with_retry(prompt, attempt, callback)
             end
         },
         vim.schedule_wrap(function(result)
-            hide_progress()
-
             -- Check curl exit code
             if result.code ~= 0 then
                 -- Exponential backoff with cap
