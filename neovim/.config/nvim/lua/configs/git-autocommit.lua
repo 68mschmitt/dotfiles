@@ -46,6 +46,12 @@ local DEFAULT_CONFIG = {
 local config = vim.deepcopy(DEFAULT_CONFIG)
 
 -- ============================================================================
+-- SPINNER CONFIGURATION
+-- ============================================================================
+local SPINNER_FRAMES = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
+local SPINNER_ID = "git_autocommit_spinner"
+
+-- ============================================================================
 -- STATE MANAGEMENT
 -- ============================================================================
 local State = {}
@@ -62,6 +68,8 @@ function State:new()
         active = false,
         commit_message_buf = nil,
         captured_message = nil,  -- Store edited message before prompt
+        spinner_timer = nil,
+        spinner_frame = 1,
     }, self)
 end
 
@@ -78,6 +86,9 @@ function State:add_temp_file(file)
 end
 
 function State:cleanup()
+    -- Stop spinner first
+    stop_spinner()
+    
     for _, win in ipairs(self.windows) do
         if vim.api.nvim_win_is_valid(win) then
             pcall(vim.api.nvim_win_close, win, true)
@@ -135,6 +146,58 @@ local state = State:new()
 -- ============================================================================
 -- UTILITY FUNCTIONS
 -- ============================================================================
+
+-- ============================================================================
+-- SPINNER FUNCTIONS
+-- ============================================================================
+
+local function start_spinner(message)
+    if not config.show_progress then
+        return
+    end
+
+    -- Stop any existing spinner
+    stop_spinner()
+
+    -- Reset frame counter
+    state.spinner_frame = 1
+
+    -- Create timer to update spinner every 80ms
+    state.spinner_timer = vim.uv.new_timer()
+    state.spinner_timer:start(
+        0,
+        80,
+        vim.schedule_wrap(function()
+            -- Update the notification with current spinner frame
+            vim.notify(message, vim.log.levels.INFO, {
+                id = SPINNER_ID,
+                title = "Git AutoCommit",
+                icon = SPINNER_FRAMES[state.spinner_frame],
+                timeout = false, -- Keep notification visible until manually dismissed
+            })
+
+            -- Move to next frame
+            state.spinner_frame = state.spinner_frame + 1
+            if state.spinner_frame > #SPINNER_FRAMES then
+                state.spinner_frame = 1
+            end
+        end)
+    )
+end
+
+function stop_spinner()
+    if state.spinner_timer then
+        state.spinner_timer:stop()
+        state.spinner_timer:close()
+        state.spinner_timer = nil
+    end
+
+    -- Hide the notification
+    local ok, snacks = pcall(require, "snacks")
+    if ok and snacks.notifier then
+        snacks.notifier.hide(SPINNER_ID)
+    end
+end
 
 -- Word-wrapping that respects boundaries
 local function wrap_text(text, width)
@@ -719,10 +782,16 @@ local function run_workflow()
     -- Generate message
     local prompt = build_prompt(state.diff, state.user_guidance)
 
+    -- Start spinner before AI generation
+    start_spinner("Generating commit message...")
+
     -- Make this synchronous via coroutine or nested callback
     -- For simplicity in plan, using callback pattern
     call_ollama_with_retry(prompt, 1, function(success, result)
         if not success then
+            -- Stop spinner on error
+            stop_spinner()
+            
             -- AI failed, offer fallback
             vim.schedule(function()
                 vim.notify("AI generation failed: " .. result, vim.log.levels.WARN)
@@ -746,6 +815,9 @@ local function run_workflow()
             end)
             return  -- Exit workflow
         end
+
+        -- Stop spinner on success
+        stop_spinner()
 
         -- Format message
         local formatted_message = format_commit_message(result)
