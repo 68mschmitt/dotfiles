@@ -135,10 +135,13 @@
         "description" : "Insert cite"
     },
     "Insert Study Question" : {
-        "prefix" : [ "studyquestion", "sq" ],
-        "body" : "\n> [!QUESTION]\n> $0\n\n---\n\n",
+        "prefix" : [ "studyquestion", "st" ],
+        "body" : "> [!QUESTION]\n> $0\n\n---\n\n",
         "description" : "Insert study question"
+    },
+    "Insert Outstanding Terms" : {
+        "prefix" : [ "outstanding", "out" ],
+        "body" : "> [!IMPORTANT] Outstanding\n> $0",
+        "description" : "Insert outstanding terms section"
     }
 }
-
-
