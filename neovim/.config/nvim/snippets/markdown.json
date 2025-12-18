@@ -133,5 +133,12 @@
         "prefix" : [ "cite", "c" ],
         "body" : "> [!CITE]\n> ",
         "description" : "Insert cite"
+    },
+    "Insert Study Question" : {
+        "prefix" : [ "studyquestion", "sq" ],
+        "body" : "\n> [!QUESTION]\n> $0\n\n---\n\n",
+        "description" : "Insert study question"
     }
 }
+
+
