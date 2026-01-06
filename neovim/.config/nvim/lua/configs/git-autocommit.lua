@@ -414,8 +414,6 @@ feat(auth): add OAuth2 authentication
 
 Implement OAuth2 flow with Google and GitHub providers.
 Includes token refresh and secure storage.
-
-Closes #123
 ]], types, config.commit_body_wrap_length)
     elseif config.commit_style == "gitmoji" then
         style_instructions = string.format([[

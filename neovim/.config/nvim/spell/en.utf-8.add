@@ -532,3 +532,10 @@ homoiconicity
 hypervisor
 virtualization
 turing
+Misprediction
+Interpositioning
+execve
+mmap
+pointes
+prethreading
+Reentrancy
