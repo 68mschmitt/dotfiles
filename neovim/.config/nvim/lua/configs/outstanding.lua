@@ -44,8 +44,8 @@ local function parse_buffer(bufnr)
             if line:match("^>") then
                 -- Skip empty blockquote lines
                 if not line:match("^>%s*$") then
-                    -- Check for resolved marker: > [x] text
-                    local resolved_text = line:match("^>%s*%[x%]%s*(.+)$")
+                    -- Check for resolved marker: > - [x] text
+                    local resolved_text = line:match("^>%s*-%s*%[x%]%s*(.+)$")
                     if resolved_text then
                         table.insert(questions, {
                             text = resolved_text,
@@ -89,16 +89,16 @@ local function toggle_resolved(bufnr, lnum)
 
     local new_line
 
-    -- Check if already resolved: > [x] text
-    local prefix, text = line:match("^(>%s*)%[x%]%s*(.+)$")
+    -- Check if already resolved: > - [x] text
+    local prefix, text = line:match("^(>%s*)-%s*%[x%]%s*(.+)$")
     if prefix and text then
-        -- Remove [x] marker
+        -- Remove - [x] marker
         new_line = prefix .. text
     else
-        -- Add [x] marker: > text -> > [x] text
+        -- Add - [x] marker: > text -> > - [x] text
         prefix, text = line:match("^(>%s*)(.+)$")
         if prefix and text then
-            new_line = prefix .. "[x] " .. text
+            new_line = prefix .. "- [x] " .. text
         end
     end
 
