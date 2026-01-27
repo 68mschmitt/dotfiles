@@ -70,6 +70,7 @@ function State:new()
         captured_message = nil,  -- Store edited message before prompt
         spinner_timer = nil,
         spinner_frame = 1,
+        spinner_stopped = false,  -- Flag to prevent race condition with scheduled notifications
     }, self)
 end
 
@@ -159,8 +160,9 @@ local function start_spinner(message)
     -- Stop any existing spinner
     stop_spinner()
 
-    -- Reset frame counter
+    -- Reset frame counter and clear stopped flag
     state.spinner_frame = 1
+    state.spinner_stopped = false
 
     -- Create timer to update spinner every 80ms
     state.spinner_timer = vim.uv.new_timer()
@@ -168,6 +170,12 @@ local function start_spinner(message)
         0,
         80,
         vim.schedule_wrap(function()
+            -- Check if spinner was stopped before this scheduled callback ran
+            -- This prevents race condition where notification appears after stop_spinner()
+            if state.spinner_stopped then
+                return
+            end
+
             -- Update the notification with current spinner frame
             vim.notify(message, vim.log.levels.INFO, {
                 id = SPINNER_ID,
@@ -186,6 +194,9 @@ local function start_spinner(message)
 end
 
 function stop_spinner()
+    -- Set stopped flag first to prevent any pending scheduled notifications
+    state.spinner_stopped = true
+
     if state.spinner_timer then
         state.spinner_timer:stop()
         state.spinner_timer:close()
@@ -1110,28 +1121,22 @@ function M.setup(opts)
 end
 
 -- ============================================================================
--- PLUGIN SPEC FOR LAZY.NVIM
+-- INITIALIZATION
 -- ============================================================================
 
-return {
-    name = "git-autocommit",
-    dir = vim.fn.stdpath("config") .. "/lua/configs",
-    lazy = false,
-    keys = {
-        { "<leader>gac", "<cmd>GitAutoCommit<cr>", desc = "Git Auto Commit" },
-        { "<leader>gah", "<cmd>GitAutoCommitHealth<cr>", desc = "Git Auto Commit Health" },
-        { "<leader>gam", ":GitAutoCommitModel ", desc = "Set Model" },
-        { "<leader>gas", ":GitAutoCommitStyle ", desc = "Set Style" },
-        { "<leader>gai", "<cmd>GitAutoCommitConfig<cr>", desc = "Show Config" },
-    },
-    opts = {
-        model = "qwen2.5-coder:7b",
-        commit_style = "conventional",
-        temperature = 0.7,
-        max_attempts = 5,
-        stream_response = true,
-    },
-    config = function(_, opts)
-        M.setup(opts)
-    end,
-}
+M.setup({
+    model = "qwen2.5-coder:7b",
+    commit_style = "conventional",
+    temperature = 0.7,
+    max_attempts = 5,
+    stream_response = true,
+})
+
+-- Register keymaps
+vim.keymap.set('n', '<leader>gac', '<cmd>GitAutoCommit<cr>', { desc = 'Git Auto Commit' })
+vim.keymap.set('n', '<leader>gah', '<cmd>GitAutoCommitHealth<cr>', { desc = 'Git Auto Commit Health' })
+vim.keymap.set('n', '<leader>gam', ':GitAutoCommitModel ', { desc = 'Set Model' })
+vim.keymap.set('n', '<leader>gas', ':GitAutoCommitStyle ', { desc = 'Set Style' })
+vim.keymap.set('n', '<leader>gai', '<cmd>GitAutoCommitConfig<cr>', { desc = 'Show Config' })
+
+return {}
