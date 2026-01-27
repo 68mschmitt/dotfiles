@@ -382,6 +382,8 @@ local function execute_commit(message, callback)
         { text = true },
         vim.schedule_wrap(function(result)
             if result.code == 0 then
+                -- Trigger fugitive refresh if available
+                pcall(vim.cmd, 'doautocmd User FugitiveChanged')
                 callback(true, "Commit created successfully")
             else
                 callback(false, "Commit failed: " .. (result.stderr or "unknown error"))
