@@ -49,7 +49,6 @@ local linter = {
         -- Configure which linters to use for each filetype
         -- Using nvim-lint's built-in linter names
         lint.linters_by_ft = {
-            typescript = { "biomejs" },
             -- Add more linters as needed:
             -- python = { "pylint" },
             -- lua = { "luacheck" },
