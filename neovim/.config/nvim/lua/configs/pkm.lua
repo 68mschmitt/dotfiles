@@ -54,15 +54,16 @@ local markview = {
             vim.api.nvim_set_hl(0, "MarkviewBlockQuoteSpecial", { fg = palette.magenta.dim, bg = darken(palette.magenta.dim, 0.88) })
             vim.api.nvim_set_hl(0, "MarkviewBlockQuoteDefault", { fg = palette.fg2, bg = palette.bg1 })
             
-            -- Palette groups (0-6) for headings and other elements (using .dim for softer colors)
+            -- Palette colors matching habamax's muted aesthetic
+            -- H1-H6 map to Palette1-6, callouts use these semantically
             local palette_colors = {
-                [0] = palette.fg2,        -- Neutral/default (softer)
-                [1] = palette.red.dim,    -- Errors, danger
-                [2] = palette.pink.dim,   -- Warnings, attention
-                [3] = palette.magenta.dim, -- Special, important
-                [4] = palette.green.dim,  -- Success, tips
-                [5] = palette.blue.dim,   -- Notes, info
-                [6] = palette.cyan.dim,   -- Misc
+                [0] = palette.fg2,      -- Neutral/default
+                [1] = "#af87af",        -- H1: muted purple (habamax Statement)
+                [2] = "#5f87af",        -- H2: muted blue (habamax Type)
+                [3] = "#87afaf",        -- H3: muted teal (habamax Identifier)
+                [4] = "#5faf5f",        -- H4: muted green (habamax String)
+                [5] = "#af875f",        -- H5: muted tan (habamax PreProc)
+                [6] = "#d75f87",        -- H6: muted pink (habamax Constant)
             }
             
             for i = 0, 6 do
