@@ -18,12 +18,14 @@ local katasync = {
     },
 }
 
-local render_markdown = {
-    'MeanderingProgrammer/render-markdown.nvim',
-    dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons
-}
+-- For `plugins/markview.lua` users.
+local markview = {
+    "OXY2DEV/markview.nvim",
+    lazy = false,
+    dependencies = { "saghen/blink.cmp" },
+};
 
 return {
-    render_markdown,
     katasync,
+    markview,
 }
