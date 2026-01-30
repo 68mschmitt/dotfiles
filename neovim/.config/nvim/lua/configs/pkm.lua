@@ -34,18 +34,18 @@ local markview = {
             b = math.floor(b * (1 - amount))
             return string.format("#%02x%02x%02x", r, g, b)
         end
-        
+
         -- Function to apply markview highlights using carbonfox palette
         local function apply_markview_highlights()
             -- Load carbonfox palette with graceful fallback
             local ok, palette = pcall(function()
                 return require("nightfox.palette").load("carbonfox")
             end)
-            
+
             if not ok then
                 return -- Fallback to markview defaults if palette unavailable
             end
-            
+
             -- Semantic callout groups (using .dim for softer colors)
             vim.api.nvim_set_hl(0, "MarkviewBlockQuoteError", { fg = palette.red.dim, bg = darken(palette.red.dim, 0.88) })
             vim.api.nvim_set_hl(0, "MarkviewBlockQuoteWarn", { fg = palette.pink.dim, bg = darken(palette.pink.dim, 0.88) })
@@ -53,7 +53,7 @@ local markview = {
             vim.api.nvim_set_hl(0, "MarkviewBlockQuoteNote", { fg = palette.blue.dim, bg = darken(palette.blue.dim, 0.88) })
             vim.api.nvim_set_hl(0, "MarkviewBlockQuoteSpecial", { fg = palette.magenta.dim, bg = darken(palette.magenta.dim, 0.88) })
             vim.api.nvim_set_hl(0, "MarkviewBlockQuoteDefault", { fg = palette.fg2, bg = palette.bg1 })
-            
+
             -- Palette colors matching habamax's muted aesthetic
             -- H1-H6 map to Palette1-6, callouts use these semantically
             local palette_colors = {
@@ -65,7 +65,7 @@ local markview = {
                 [5] = "#af875f",        -- H5: muted tan (habamax PreProc)
                 [6] = "#d75f87",        -- H6: muted pink (habamax Constant)
             }
-            
+
             for i = 0, 6 do
                 local color = palette_colors[i]
                 local bg = darken(color, 0.90)
@@ -74,23 +74,23 @@ local markview = {
                 vim.api.nvim_set_hl(0, "MarkviewPalette" .. i .. "Bg", { bg = bg })
                 vim.api.nvim_set_hl(0, "MarkviewPalette" .. i .. "Sign", { fg = color })
             end
-            
+
             -- Code block styling
             vim.api.nvim_set_hl(0, "MarkviewCode", { bg = palette.bg1 })
             vim.api.nvim_set_hl(0, "MarkviewCodeInfo", { fg = palette.fg1, bg = palette.bg1 })
             vim.api.nvim_set_hl(0, "MarkviewInlineCode", { bg = darken(palette.fg1, 0.95) })
         end
-        
+
         -- Setup markview with default config
         require("markview").setup({})
-        
+
         -- Apply highlights after colorscheme loads
         vim.api.nvim_create_autocmd("ColorScheme", {
             pattern = "carbonfox",
             callback = apply_markview_highlights,
             desc = "Apply markview highlights for carbonfox colorscheme"
         })
-        
+
         -- Apply highlights immediately if carbonfox is already loaded
         if vim.g.colors_name == "carbonfox" then
             apply_markview_highlights()
