@@ -170,8 +170,9 @@ function M.open_picker()
             toggle = function(picker)
                 local item = picker:current()
                 if item then
+                    local current_idx = picker.list.cursor
                     toggle_resolved(item.bufnr, item.lnum)
-                    -- Refresh picker with updated data
+
                     local new_questions = parse_buffer(item.bufnr)
                     local new_items = {}
                     for _, q in ipairs(new_questions) do
@@ -186,6 +187,9 @@ function M.open_picker()
                         })
                     end
                     picker.opts.items = new_items
+
+                    local next_idx = math.min(current_idx + 1, #new_items)
+                    picker.list:set_target(next_idx)
                     picker:find()
                 end
             end,
