@@ -563,3 +563,7 @@ structs
 C90
 fieldname
 Geeks4Geeks
+C11
+indicies
+Bool
+deconstructors
