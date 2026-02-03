@@ -143,5 +143,10 @@
         "prefix" : [ "outstanding", "out" ],
         "body" : "> [!IMPORTANT] Outstanding\n> $0",
         "description" : "Insert outstanding terms section"
+    },
+    "Insert Answers" : {
+        "prefix" : [ "answers", "ans" ],
+        "body" : "> [!SUCCESS] Answers\n> $0",
+        "description" : "Insert answers section"
     }
 }

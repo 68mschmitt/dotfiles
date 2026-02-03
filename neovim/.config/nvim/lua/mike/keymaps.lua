@@ -77,3 +77,11 @@ vim.keymap.set("n", "z/", function()
 end, { noremap = true, silent = true, desc = "Auto-correct word to first suggestion" })
 
 vim.keymap.set("i", "<C-h>", "---<cr><esc>o", { noremap = true, silent = true })
+
+-- Insert current date and time
+vim.keymap.set("n", "<leader>tt", function()
+    local datetime = os.date("%Y-%m-%d %H:%M:%S")
+    vim.api.nvim_put({ datetime }, "c", true, true)
+    vim.cmd('normal! o')
+    vim.cmd('startinsert')
+end, { noremap = true, silent = true, desc = "Insert current date and time" })
