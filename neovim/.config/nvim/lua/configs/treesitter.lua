@@ -24,7 +24,6 @@ local treesitter = {
                     "markdown_inline",
                     "json",
                     "html",
-                    "latex",
                     "typst",
                     "yaml"
                 },
