@@ -82,7 +82,11 @@ local markview = {
         end
 
         -- Setup markview with default config
-        require("markview").setup({})
+        require("markview").setup({
+            preview = {
+                hybrid_modes = { "n", "i" },  -- Show raw markdown on cursor line
+            },
+        })
 
         -- Apply highlights after colorscheme loads
         vim.api.nvim_create_autocmd("ColorScheme", {
