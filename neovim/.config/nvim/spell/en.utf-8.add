@@ -595,3 +595,6 @@ OpenAPI
 Redis
 E2E
 NestJS
+CMake
+headers
+CTest
