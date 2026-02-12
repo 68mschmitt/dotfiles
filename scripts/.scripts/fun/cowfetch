@@ -5,7 +5,7 @@
 
 COW_FILE="${COW_FILE:-default}"
 COW_MESSAGE="${COW_MESSAGE:-$(hostname -s)}"
-MODULES="${MODULES:-Title:Separator:OS:Host:Kernel:Uptime:Packages:Shell:Terminal:CPU:GPU:Memory:Disk:Break:Colors}"
+FASTFETCH_CONFIG="${FASTFETCH_CONFIG:-examples/13.jsonc}"
 LOLCAT_OPTS="${LOLCAT_OPTS:--f}"
 NO_COLOR="${NO_COLOR:-}"
 
@@ -23,11 +23,11 @@ Options:
   -r, --random    Randomly select a cow figure
 
 Environment Variables:
-  COW_FILE      Cowsay figure (default: default)
-  COW_MESSAGE   Message for the cow (default: hostname)
-  MODULES       Fastfetch modules to display
-  LOLCAT_OPTS   Options for lolcat (default: -f)
-  NO_COLOR      Set to disable rainbow colors
+  COW_FILE          Cowsay figure (default: default)
+  COW_MESSAGE       Message for the cow (default: hostname)
+  FASTFETCH_CONFIG  Fastfetch config preset (default: examples/13.jsonc)
+  LOLCAT_OPTS       Options for lolcat (default: -f)
+  NO_COLOR          Set to disable rainbow colors
 
 Examples:
   cowfetch                                      # Rainbow cow with hostname
@@ -83,10 +83,32 @@ else
     fi
 fi
 
-if [[ -n "$NO_COLOR" ]] || ! command -v lolcat &> /dev/null; then
-    LOGO=$(cowsay -f "$COW_FILE" "$COW_MESSAGE")
-else
-    LOGO=$(cowsay -f "$COW_FILE" "$COW_MESSAGE" | lolcat $LOLCAT_OPTS)
+MODULE_LINES="${MODULE_LINES:-16}"
+
+# Generate cowsay output (without color first to count lines)
+COW_PLAIN=$(cowsay -f "$COW_FILE" "$COW_MESSAGE")
+COW_LINES=$(echo "$COW_PLAIN" | wc -l | tr -d ' ')
+
+# Calculate padding to vertically center cow and modules
+LOGO_PADDING=0
+if [[ $MODULE_LINES -gt $COW_LINES ]]; then
+    # Modules taller than cow: pad the cow (prepend newlines to center it)
+    PADDING=$(( (MODULE_LINES - COW_LINES) / 2 ))
+    PADDING_STR=""
+    for ((i=0; i<PADDING; i++)); do
+        PADDING_STR+=$'\n'
+    done
+    COW_PLAIN="${PADDING_STR}${COW_PLAIN}"
+elif [[ $COW_LINES -gt $MODULE_LINES ]]; then
+    # Cow taller than modules: pad the logo top (pushes cow down, centering modules)
+    LOGO_PADDING=$(( (COW_LINES - MODULE_LINES) / 2 ))
 fi
 
-fastfetch --data-raw "$LOGO" -s "$MODULES"
+# Apply color if enabled
+if [[ -n "$NO_COLOR" ]] || ! command -v lolcat &> /dev/null; then
+    LOGO="$COW_PLAIN"
+else
+    LOGO=$(echo "$COW_PLAIN" | lolcat $LOLCAT_OPTS)
+fi
+
+fastfetch --data-raw "$LOGO" -c "$FASTFETCH_CONFIG" --logo-padding-top "$LOGO_PADDING"
