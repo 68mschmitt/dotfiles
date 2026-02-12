@@ -1,0 +1,92 @@
+#!/bin/bash
+#
+# cowfetch - fastfetch with colorful cowsay ASCII art (via lolcat)
+#
+
+COW_FILE="${COW_FILE:-default}"
+COW_MESSAGE="${COW_MESSAGE:-$(hostname -s)}"
+MODULES="${MODULES:-Title:Separator:OS:Host:Kernel:Uptime:Packages:Shell:Terminal:CPU:GPU:Memory:Disk:Break:Colors}"
+LOLCAT_OPTS="${LOLCAT_OPTS:--f}"
+NO_COLOR="${NO_COLOR:-}"
+
+show_help() {
+    cat << 'EOF'
+cowfetch - fastfetch with colorful cowsay ASCII art
+
+Usage: cowfetch [figure] [message]
+       cowfetch [options]
+
+Options:
+  -h, --help      Show this help message
+  -l, --list      List available cow figures
+  -n, --no-color  Disable rainbow colors (plain cowsay)
+  -r, --random    Randomly select a cow figure
+
+Environment Variables:
+  COW_FILE      Cowsay figure (default: default)
+  COW_MESSAGE   Message for the cow (default: hostname)
+  MODULES       Fastfetch modules to display
+  LOLCAT_OPTS   Options for lolcat (default: -f)
+  NO_COLOR      Set to disable rainbow colors
+
+Examples:
+  cowfetch                                      # Rainbow cow with hostname
+  cowfetch tux "I use Arch btw"                 # Rainbow tux
+  cowfetch dragon "RAWR!"                       # Rainbow dragon
+  cowfetch -n tux "Plain tux"                   # No rainbow
+  LOLCAT_OPTS="-f -S 50" cowfetch               # Custom lolcat seed
+  
+Available cow figures:
+EOF
+    cowsay -l | tail -n +2
+}
+
+RANDOM_COW=""
+
+while [[ "$1" == -* ]]; do
+    case "$1" in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -l|--list)
+            cowsay -l
+            exit 0
+            ;;
+        -n|--no-color)
+            NO_COLOR=1
+            shift
+            ;;
+        -r|--random)
+            RANDOM_COW=1
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -n "$RANDOM_COW" ]]; then
+    COW_FILE=$(cowsay -l | tail -n +2 | tr ' ' '\n' | grep -v '^$' | shuf -n 1)
+    # With --random, $1 is the message (if any)
+    if [[ -n "$1" ]]; then
+        COW_MESSAGE="$1"
+    fi
+else
+    if [[ -n "$1" ]]; then
+        COW_FILE="$1"
+    fi
+    if [[ -n "$2" ]]; then
+        COW_MESSAGE="$2"
+    fi
+fi
+
+if [[ -n "$NO_COLOR" ]] || ! command -v lolcat &> /dev/null; then
+    LOGO=$(cowsay -f "$COW_FILE" "$COW_MESSAGE")
+else
+    LOGO=$(cowsay -f "$COW_FILE" "$COW_MESSAGE" | lolcat $LOLCAT_OPTS)
+fi
+
+fastfetch --data-raw "$LOGO" -s "$MODULES"
