@@ -207,7 +207,7 @@ QPI
 SMP
 hypervisors
 HPC
-s/!
+#/!
 Ryzen
 Threadripper
 CCX
@@ -220,7 +220,7 @@ i9
 ServiceAccounts
 EndpointSlice
 ServiceAccount
-s
+#
 kubelet
 kubelets
 CronJob
@@ -604,3 +604,7 @@ KPI
 ECUs
 Maksim
 Sevrerin
+s/!
+Rits
+to/!
+to
