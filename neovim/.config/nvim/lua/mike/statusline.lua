@@ -5,7 +5,7 @@ local mode_alias = {
     ["no"] = "OP",
     ["nov"] = "OP",
     ["noV"] = "OP",
-    ["no"] = "OP",
+    ["no\22"] = "OP",
     ["niI"] = "NORMAL",
     ["niR"] = "NORMAL",
     ["niV"] = "NORMAL",
@@ -13,11 +13,11 @@ local mode_alias = {
     ["vs"] = "VISUAL",
     ["V"] = "LINES",
     ["Vs"] = "LINES",
-    [""] = "BLOCK",
-    ["s"] = "BLOCK",
+    ["\22"] = "BLOCK",
+    ["\22s"] = "BLOCK",
     ["s"] = "SELECT",
-    ["S"] = "SELECT",
-    [""] = "BLOCK",
+    ["S"] = "S-LINE",
+    ["\19"] = "S-BLOCK",
     ["i"] = "INSERT",
     ["ic"] = "INSERT",
     ["ix"] = "INSERT",
@@ -176,6 +176,13 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = vim.api.nvim_create_augroup("statusline", { clear = true }),
     callback = function()
         vim.cmd.redrawstatus()
+    end,
+})
+
+vim.api.nvim_create_autocmd("ColorScheme", {
+    group = vim.api.nvim_create_augroup("statusline_colors", { clear = true }),
+    callback = function()
+        applied_highlights = {}
     end,
 })
 

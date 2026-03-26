@@ -6,13 +6,13 @@ M.DebugLsp = function(level)
     elseif (level == 1) then
         vim.lsp.set_log_level(vim.log.levels.WARN)
     elseif (level == 2) then
-        vim.lsp.set_log_level(vim.log.levels.WARN)
+        vim.lsp.set_log_level(vim.log.levels.DEBUG)
     end
     vim.lsp.log.set_format_func(vim.inspect)
 end
 
 M.isWindows = function()
-    local platform = vim.loop.os_uname().sysname
+    local platform = (vim.uv or vim.loop).os_uname().sysname
     return platform == "Windows_NT"
 end
 

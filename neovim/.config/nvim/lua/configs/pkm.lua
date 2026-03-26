@@ -3,8 +3,7 @@
 local katasync = {
     '68mschmitt/katasync.nvim',
     dev = true,
-    lazy = false,
-    cmd = { "NewNote", "SortNote" },
+    cmd = { "NewNote", "SortNote", "CreateNote", "ListInbox" },
     keys = {
         { "<leader>nn", "<cmd>NewNote<cr>",    desc = "New note (inbox)" },
         { "<leader>nc", "<cmd>CreateNote<cr>", desc = "Create new note with intended location" },
@@ -21,7 +20,7 @@ local katasync = {
 -- For `plugins/markview.lua` users.
 local markview = {
     "OXY2DEV/markview.nvim",
-    lazy = false,
+    ft = { "markdown" },
     dependencies = { "saghen/blink.cmp" },
     config = function()
         -- Helper to darken colors for backgrounds

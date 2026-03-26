@@ -30,7 +30,7 @@ local treesitter = {
                 ignore_install={},
                 modules={},
                 -- Install parsers synchronously (only applied to `ensure_installed`)
-                sync_install = true,
+                sync_install = false,
 
                 -- Automatically install missing parsers when entering buffer
                 -- Recommendation: set to false if you don't have `tree-sitter` CLI installed locally
@@ -47,7 +47,7 @@ local treesitter = {
 
 local treesitter_context = {
     "nvim-treesitter/nvim-treesitter-context",
-    after = "nvim-treesitter",
+    dependencies = { "nvim-treesitter/nvim-treesitter" },
     config = function()
         require("treesitter-context").setup({
             enable = true, -- Enable this plugin (Can be enabled/disabled later via commands)

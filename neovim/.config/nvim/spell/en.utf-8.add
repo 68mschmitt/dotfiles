@@ -90,17 +90,13 @@ Polytechnique
 tmux
 tmux's
 rebase
-tmux
-<<<<<<< Updated upstream
 Pywal
 TTYs
 mv
 config
 Laakmann
-=======
 Aderant
 inlined
->>>>>>> Stashed changes
 Udemy
 npm
 TypeScript
@@ -112,7 +108,6 @@ dotfile
 LLM
 MCP
 LLMs
-<<<<<<< Updated upstream
 Gomes
 Penteado
 eBills
@@ -136,18 +131,13 @@ pnpm
 monorepos
 ThePrimeagen
 corepack
-<<<<<<< Updated upstream
-=======
 X11
->>>>>>> Stashed changes
-=======
 Iscrupe
 SWA
 ITK
 Billblast
 iTimeKeep
 SWE
->>>>>>> Stashed changes
 init
 Mise
 MERN
@@ -162,7 +152,6 @@ Wolter
 Harrel
 onboarding
 kubernetes
-<<<<<<< Updated upstream
 vite
 webpack
 CNCF
@@ -207,7 +196,6 @@ QPI
 SMP
 hypervisors
 HPC
-#/!
 Ryzen
 Threadripper
 CCX
@@ -220,7 +208,6 @@ i9
 ServiceAccounts
 EndpointSlice
 ServiceAccount
-#
 kubelet
 kubelets
 CronJob
@@ -239,11 +226,8 @@ ClusterIP
 NodePort
 Nodeport
 type
-type
-type
 LoadBalancer
 ExternalName
-kube
 CNI
 runtimes
 lifecycle
@@ -254,8 +238,6 @@ addons
 setHostnameAsFQDN
 AAAA
 SRV
-<<<<<<< Updated upstream
-=======
 Ansible
 Proxmox
 cloudinit
@@ -270,16 +252,12 @@ linux
 Nanocoder
 Niri
 Malloc
-agentic
-lifecycle
 AWS
 GCP
 HCL
 IaC
 HashiCorp
 Graphana
->>>>>>> Stashed changes
-=======
 Runit
 Systemd
 BusyBox
@@ -289,7 +267,6 @@ MUI
 Zsh
 TODO
 isNewApiEnabled
->>>>>>> Stashed changes
 Busybox
 Leetcode
 Duolingo
@@ -314,7 +291,6 @@ Cygwin
 C99
 malloc
 VLAs
-<<<<<<< Updated upstream
 Minix
 Mongo
 HashTable
@@ -329,8 +305,6 @@ Tictac
 neovim
 Ints
 Trie
-󰏉
-θ
 BFS
 DFS
 Prim's
@@ -355,7 +329,6 @@ WinDBg
 GDB
 lang
 LLVM
-C
 MSVS
 MinGW
 CMAKE
@@ -365,8 +338,6 @@ NuGet
 OpenCV
 POCO
 Tensorflow
-protobuf
-protobuf
 gtest
 gmock
 Catch2
@@ -374,22 +345,12 @@ Orbit
 PyPorch
 Libraries
 Boost
-OpenCV
-POCO
-Tensorflow
-protobuf
 spdlog
-gRPC
 pybind11
 fmt
 opencl
 v3
-<<<<<<< Updated upstream
-=======
-HashTable
 Kinsley
->>>>>>> Stashed changes
-=======
 Pywall
 PixiJS
 XState
@@ -397,7 +358,6 @@ Leitner
 Linter
 HTML5
 WebGL
->>>>>>> Stashed changes
 NPCs
 NPC
 ren
@@ -412,20 +372,13 @@ Conny
 Andrej
 Karpathy
 Quickstart
-<<<<<<< Updated upstream
 aderant
 Notilous
 Techritious
 Exercism
-<<<<<<< Updated upstream
-=======
 Miata
->>>>>>> Stashed changes
-=======
 Pillip
 Stidyn
->>>>>>> Stashed changes
-Miata
 tions
 Turborepo
 NX
@@ -440,7 +393,6 @@ ZMK
 zmk
 Marttin
 un
-mx
 mx
 toastify
 S3
@@ -465,7 +417,6 @@ Refspec
 Packfiles
 powershell
 xfce
-<<<<<<< Updated upstream
 Biolinguistics
 OpenSUSE
 CentOS
@@ -474,20 +425,15 @@ Omarchy
 CachyOS
 incrementor
 decrementor
-=======
 GPT
->>>>>>> Stashed changes
 nums
 ith
 leetcode
-<<<<<<< Updated upstream
 NodeJS
 V1
 checkmark
 dropdown
-=======
 IIII
->>>>>>> Stashed changes
 Neovim's
 mergetool
 Cognos
@@ -543,7 +489,6 @@ Figma
 Sharepoint
 C4
 Microservices
-C4
 GGC
 K6
 AUTH
@@ -604,7 +549,4 @@ KPI
 ECUs
 Maksim
 Sevrerin
-s/!
 Rits
-to/!
-to

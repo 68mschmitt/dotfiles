@@ -39,38 +39,9 @@ local lazydev = {
     },
 }
 
--- Simplified nvim-lint configuration using built-in linters
-local linter = {
-    "mfussenegger/nvim-lint",
-    event = { "BufWritePost", "BufEnter", "InsertLeave" },
-    config = function()
-        local lint = require("lint")
-
-        -- Configure which linters to use for each filetype
-        -- Using nvim-lint's built-in linter names
-        lint.linters_by_ft = {
-            -- Add more linters as needed:
-            -- python = { "pylint" },
-            -- lua = { "luacheck" },
-        }
-
-        -- Create autocmd to run linter on specified events
-        vim.api.nvim_create_autocmd({ "BufWritePost", "BufEnter", "InsertLeave" }, {
-            group = vim.api.nvim_create_augroup("nvim-lint", { clear = true }),
-            callback = function(event)
-                local ft = vim.bo[event.buf].filetype
-                if lint.linters_by_ft[ft] then
-                    lint.try_lint()
-                end
-            end,
-        })
-    end
-}
-
 return {
     mason,
     masonLspconfig,
     schemastore,
     lazydev,
-    linter,
 }
