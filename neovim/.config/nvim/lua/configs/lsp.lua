@@ -23,7 +23,11 @@ local masonLspconfig = {
     },
 }
 
-local schemastore = { "b0o/schemastore.nvim", lazy = true }
+local schemastore = {
+    "b0o/schemastore.nvim",
+    lazy = true,
+    ft = { "json", "jsonc", "yaml" },
+}
 
 local lazydev = {
     "folke/lazydev.nvim",

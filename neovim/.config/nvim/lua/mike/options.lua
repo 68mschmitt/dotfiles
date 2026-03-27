@@ -18,6 +18,7 @@ vim.opt.undofile = true
 vim.opt.hlsearch = true
 vim.opt.incsearch = true
 vim.opt.ignorecase = true
+vim.opt.smartcase = true
 
 vim.opt.termguicolors = true
 
@@ -39,3 +40,16 @@ vim.opt.timeoutlen = 300
 -- split windows
 vim.opt.splitright = true
 vim.opt.splitbelow = true
+
+-- cursor line visibility
+vim.opt.cursorline = true
+
+-- show whitespace characters
+vim.opt.list = true
+vim.opt.listchars = { tab = "\u{bb} ", trail = "\u{b7}", nbsp = "\u{2423}" }
+
+-- ask instead of erroring on unsaved changes
+vim.opt.confirm = true
+
+-- make jumplist behave like browser back/forward
+vim.opt.jumpoptions = "stack"

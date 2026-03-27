@@ -1,11 +1,11 @@
--- Copy the current buffer file name to the default register
-vim.keymap.set("n", "<leader>nf", "<cmd>let @\" = expand(\"%:t\")\"<cr>", { noremap = true, silent = true, desc = "Copy filename to register" })
+-- Copy the current buffer file name to the system clipboard
+vim.keymap.set("n", "<leader>nf", '<cmd>let @+ = expand("%:t")<cr>', { noremap = true, silent = true, desc = "Copy filename to clipboard" })
+
+-- Clear search highlights
+vim.keymap.set("n", "<Esc>", "<cmd>noh<cr>", { noremap = true, silent = true, desc = "Clear search highlights" })
 
 -- Close the quickfix window
-vim.keymap.set("n", "<Esc>", "<cmd>noh<cr><cmd>cclose<cr>", { noremap = true, silent = true, desc = "Clear highlights and close quickfix" })
-
--- Clear word highlighting
-vim.keymap.set("n", "<leader>nh", "<cmd>noh<cr>", { noremap = true, silent = true, desc = "Clear search highlights" })
+vim.keymap.set("n", "<leader>q", "<cmd>cclose<cr>", { noremap = true, silent = true, desc = "Close quickfix" })
 
 -- QOL
 vim.keymap.set("n", "<C-s>", "<cmd>w<cr>", { noremap = true, silent = true, desc = "Save file" })
@@ -26,9 +26,9 @@ vim.keymap.set("n", "<C-A-h>", ":vert res -3 <CR>", { noremap = true, silent = t
 vim.keymap.set("n", "<C-A-j>", ":res +3 <CR>", { noremap = true, silent = true, desc = "Increase split height" })
 vim.keymap.set("n", "<C-A-k>", ":res -3 <CR>", { noremap = true, silent = true, desc = "Decrease split height" })
 
--- Move to the next or previous buffer with Tab and Shift-Tab
-vim.keymap.set("n", "<Tab>", ":bnext<CR>", { noremap = true, silent = true, desc = "Next buffer" })
-vim.keymap.set("n", "<S-Tab>", ":bprev<CR>", { noremap = true, silent = true, desc = "Previous buffer" })
+-- Navigate buffers (using ]b/[b to preserve <C-i> jumplist navigation)
+vim.keymap.set("n", "]b", ":bnext<CR>", { noremap = true, silent = true, desc = "Next buffer" })
+vim.keymap.set("n", "[b", ":bprev<CR>", { noremap = true, silent = true, desc = "Previous buffer" })
 
 -- Move a highlighted line up or down 1 line
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", { noremap = true, silent = true, desc = "Move selection down" })
