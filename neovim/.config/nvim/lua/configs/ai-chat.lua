@@ -5,12 +5,12 @@ local ai_chat = {
     keys = { "<leader>aa", "<leader>ac" },
     config = function()
         require("ai-chat").setup({
-            default_provider = "ollama",
-            default_model = "llama3.2",
+            default_provider = "bedrock",
+            default_model = "anthropic.claude-opus-4-6-v1",
         })
     end,
 }
 
 return {
-    ai_chat
+    ai_chat,
 }
