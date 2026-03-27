@@ -57,8 +57,7 @@ local function highlight()
     local statusline_hl = "MikeStatusLine" .. background
     if not applied_highlights[background] then
         local colors = vim.api.nvim_get_hl(0, { name = background })
-        local fg = vim.api.nvim_get_hl(0, { name = background }).fg
-        vim.api.nvim_set_hl(0, statusline_hl, { fg = fg or colors.fg, bg = colors.bg })
+        vim.api.nvim_set_hl(0, statusline_hl, { fg = colors.fg, bg = colors.bg })
         applied_highlights[background] = statusline_hl
     end
     return "%#" .. statusline_hl .. "#"
@@ -129,13 +128,14 @@ local function get_filetype_symbol()
 end
 
 local function get_file_info()
-    local file_info = " %t"
+    local name = vim.fn.expand("%:.")
+    local file_info = " " .. (name == "" and "[No Name]" or name)
     if vim.bo.readonly and vim.bo.modified then
-        file_info = file_info .. "  " .. " "
+        file_info = file_info .. "  " .. " "
     elseif vim.bo.readonly then
-        file_info = file_info .. "  "
+        file_info = file_info .. "  "
     elseif vim.bo.modified then
-        file_info = file_info .. "  "
+        file_info = file_info .. "  "
     end
     return file_info
 end

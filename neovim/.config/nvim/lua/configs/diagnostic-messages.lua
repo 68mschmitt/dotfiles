@@ -4,17 +4,20 @@
 local diagnostic = {
     "rachartier/tiny-inline-diagnostic.nvim",
     event = "VeryLazy",
-    priority = 1000,
-    config = function()
-        require('tiny-inline-diagnostic').setup({
-            options = {
-                -- Display events: show diagnostics on LSP attach and when diagnostics change
-                -- DiagnosticChanged fires when linters (nvim-lint) report results
-                overwrite_events = { "LspAttach", "DiagnosticChanged" }
-            }
+    init = function()
+        vim.diagnostic.config({
+            virtual_text = false,
+            severity_sort = true,
         })
-        vim.diagnostic.config({ virtual_text = false })
-    end
+    end,
+    opts = {
+        options = {
+            show_source = true,
+            -- Display events: show diagnostics on LSP attach and when diagnostics change
+            -- DiagnosticChanged fires when linters (nvim-lint) report results
+            overwrite_events = { "LspAttach", "DiagnosticChanged" },
+        },
+    },
 }
 
 return {
