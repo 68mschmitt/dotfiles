@@ -10,12 +10,6 @@ autocmd('TextYankPost', {
 
 autocmd("FileType", {
     group = group,
-    pattern = "cs",
-    command = "compiler dotnet",
-})
-
-autocmd("FileType", {
-    group = group,
     pattern = "*",
     command = "set formatoptions-=o"
 })
@@ -52,7 +46,7 @@ autocmd("LspAttach", {
     group = group,
     callback = function(event)
         local id = vim.tbl_get(event, "data", "client_id")
-        local client = id and vim.lsp.get_client_by_id(id)
+        local client = id and vim.lsp.get_clients({ id = id })[1]
 
         if not client then return end
 
@@ -61,7 +55,7 @@ autocmd("LspAttach", {
         if client:supports_method("textDocument/codeLens") then
             autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
                 buffer = event.buf,
-                callback = function(ev) vim.lsp.codelens.refresh({ bufnr = ev.buf }) end,
+                callback = function() vim.lsp.codelens.enable(true) end,
             })
         end
 

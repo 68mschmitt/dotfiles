@@ -1,3 +1,22 @@
+local marginalia = {
+  "68mschmitt/marginalia.nvim",
+  event = "VeryLazy",
+  opts = function()
+    return {
+      providers = { require("marginalia.providers.diagnostic") },
+      keys = {
+        toggle   = "<leader>ma",
+        next     = "]m",
+        prev     = "[m",
+        expand   = "<leader>me",
+        float    = "<leader>mf",
+        loclist  = "<leader>ml",
+      },
+      auto_attach = true,
+    }
+  end,
+}
+
 local ai_chat = {
     "68mschmitt/ai-chat.nvim",
     cmd = { "AiChat", "AiChatOpen", "AiChatSend" },
@@ -12,5 +31,6 @@ local ai_chat = {
 }
 
 return {
-    ai_chat,
+    -- ai_chat,
+    -- marginalia,
 }

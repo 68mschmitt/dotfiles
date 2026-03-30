@@ -49,11 +49,6 @@ vim.keymap.set("n", "<leader>y", "\"+y", { noremap = true, silent = true, desc =
 vim.keymap.set("v", "<leader>y", "\"+y", { noremap = true, silent = true, desc = "Yank to system clipboard" })
 vim.keymap.set("n", "<leader>Y", "\"+Y", { noremap = true, silent = true, desc = "Yank line to system clipboard" })
 
--- Tab keymaps
-vim.keymap.set("n", "<leader>tn", "<cmd>.tabnew<cr>", { noremap = true, silent = true, desc = "New tab" })
-vim.keymap.set("n", "<leader>te", "<cmd>tabc<cr>", { noremap = true, silent = true, desc = "Close tab" })
-vim.keymap.set("n", "<leader>to", "<cmd>tabo<cr>", { noremap = true, silent = true, desc = "Close other tabs" })
-
 -- Execute lua inline
 vim.keymap.set("n", "<leader><leader>x", "<cmd>source %<cr>", { noremap = true, silent = true, desc = "Source current file" })
 vim.keymap.set("n", "<leader>x", ":.lua<cr>", { noremap = true, silent = true, desc = "Execute current line as Lua" })
@@ -70,11 +65,3 @@ vim.keymap.set("n", "<leader>cb", "<cmd>bdel!<cr>", { noremap = true, silent = t
 vim.keymap.set("n", "z/", function()
     vim.cmd('normal 1z=')
 end, { noremap = true, silent = true, desc = "Auto-correct word to first suggestion" })
-
--- Insert current date and time
-vim.keymap.set("n", "<leader>tt", function()
-    local datetime = os.date("%Y-%m-%d %H:%M:%S")
-    vim.api.nvim_put({ datetime }, "c", true, true)
-    vim.cmd('normal! o')
-    vim.cmd('startinsert')
-end, { noremap = true, silent = true, desc = "Insert current date and time" })
