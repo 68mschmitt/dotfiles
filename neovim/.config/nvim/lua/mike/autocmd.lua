@@ -5,7 +5,7 @@ local group = vim.api.nvim_create_augroup("MikeAuGroup", { clear = true })
 autocmd('TextYankPost', {
     desc = 'Highlight when yanking (copying) text',
     group = group,
-    callback = function() require("vim.hl").on_yank({ higroup = "Substitute", timeout = 200 }) end,
+    callback = function() vim.hl.on_yank({ higroup = "Substitute", timeout = 200 }) end,
 })
 
 autocmd("FileType", {

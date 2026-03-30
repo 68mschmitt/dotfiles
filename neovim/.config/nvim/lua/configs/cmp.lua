@@ -1,12 +1,7 @@
-local friendly_snippets = { 'rafamadriz/friendly-snippets' }
-
-local luasnip = { 'L3MON4D3/LuaSnip' }
-
 local blink = {
     'saghen/blink.cmp',
     dependencies = {
-        luasnip,
-        friendly_snippets,
+        'rafamadriz/friendly-snippets',
     },
     version = '*',
     opts = {
@@ -36,15 +31,6 @@ local blink = {
         },
     },
     opts_extend = { "sources.default" },
-    config = function(_, opts)
-        local cmp = require("blink.cmp")
-        cmp.setup(opts)
-        local vs_code_snip = require("luasnip.loaders.from_vscode")
-        vs_code_snip.lazy_load()
-        vs_code_snip.lazy_load({
-            paths = vim.fn.stdpath("config") .. "/snippets/"
-        })
-    end
 };
 
 return {

@@ -27,8 +27,8 @@ vim.keymap.set("n", "<C-A-j>", ":res +3 <CR>", { noremap = true, silent = true, 
 vim.keymap.set("n", "<C-A-k>", ":res -3 <CR>", { noremap = true, silent = true, desc = "Decrease split height" })
 
 -- Navigate buffers (using ]b/[b to preserve <C-i> jumplist navigation)
-vim.keymap.set("n", "]b", ":bnext<CR>", { noremap = true, silent = true, desc = "Next buffer" })
-vim.keymap.set("n", "[b", ":bprev<CR>", { noremap = true, silent = true, desc = "Previous buffer" })
+vim.keymap.set("n", "<leader>bn", ":bnext<CR>", { noremap = true, silent = true, desc = "Next buffer" })
+vim.keymap.set("n", "<leader>bp", ":bprev<CR>", { noremap = true, silent = true, desc = "Previous buffer" })
 
 -- Move a highlighted line up or down 1 line
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", { noremap = true, silent = true, desc = "Move selection down" })
