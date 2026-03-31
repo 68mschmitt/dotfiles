@@ -1,7 +1,7 @@
 -- Personal Knowledge Management
 
 local katasync = {
-    '68mschmitt/katasync.nvim',
+    '68mschmitt/cubby.nvim',
     dev = true,
     cmd = { "NewNote", "SortNote", "CreateNote", "ListInbox" },
     keys = {

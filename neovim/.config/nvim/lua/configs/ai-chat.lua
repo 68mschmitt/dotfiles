@@ -31,6 +31,5 @@ local ai_chat = {
 }
 
 return {
-    -- ai_chat,
-    -- marginalia,
+    ai_chat,
 }
