@@ -84,6 +84,7 @@ local markview = {
         require("markview").setup({
             preview = {
                 hybrid_modes = { "n", "i" },  -- Show raw markdown on cursor line
+                ignore_buftypes = { "help" },
             },
         })
 
