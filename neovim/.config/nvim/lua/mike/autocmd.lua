@@ -29,6 +29,11 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
     command = "set filetype=json",
 })
 
+vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
+    pattern = { "*.keymap", "*.overlay" },
+    command = "set filetype=devicetree",
+})
+
 local keymap_setup = function(_, bufnr)
     local opts = function(desc)
         return { noremap = true, buffer = bufnr, desc = desc }
