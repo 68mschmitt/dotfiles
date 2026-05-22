@@ -15,7 +15,6 @@ local treesitter = {
                 "tsx",
                 "c_sharp",
                 "c",
-                "devicetree",
                 "lua",
                 "vim",
                 "vimdoc",
@@ -25,7 +24,8 @@ local treesitter = {
                 "json",
                 "html",
                 "typst",
-                "yaml"
+                "yaml",
+                "racket"
             })
 
             -- Highlighting is now native neovim — enable it for all filetypes
