@@ -9,23 +9,23 @@ local treesitter = {
 
             -- Install parsers (no-op if already installed)
             require('nvim-treesitter').install({
-                "regex",
-                "javascript",
-                "typescript",
-                "tsx",
-                "c_sharp",
                 "c",
+                "c_sharp",
+                "commonlisp",
+                "html",
+                "javascript",
+                "json",
                 "lua",
-                "vim",
-                "vimdoc",
-                "query",
                 "markdown",
                 "markdown_inline",
-                "json",
-                "html",
+                "query",
+                "regex",
+                "tsx",
+                "typescript",
                 "typst",
-                "yaml",
-                "racket"
+                "vim",
+                "vimdoc",
+                "yaml"
             })
 
             -- Highlighting is now native neovim — enable it for all filetypes
