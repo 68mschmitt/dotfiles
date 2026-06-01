@@ -30,5 +30,5 @@
 # macos-titlebar-style = hidden
 # macos-option-as-alt = true
 
-background-opacity = 0.9
+background-opacity = 1
 quit-after-last-window-closed = true
