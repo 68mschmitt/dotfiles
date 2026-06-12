@@ -121,5 +121,5 @@ local obsidian = {
 return {
     katasync,
     markview,
-    obsidian,
+    -- obsidian,
 }

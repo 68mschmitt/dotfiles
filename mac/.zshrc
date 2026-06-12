@@ -11,5 +11,6 @@ eval "$(starship init zsh)"
 alias tnotes="cd ~/projects/second-brain/Vault/Vault/ && nvim"
 alias cwp="~/.scripts/wallpaper-scripts/set-random-wallpaper.sh"
 alias bwp="~/.scripts/wallpaper-scripts/blacklist-wallpaper.sh"
+alias pullall="~/.scripts/git-related/pull-latest-for-all.sh"
 
 fastfetch
