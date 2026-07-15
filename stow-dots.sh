@@ -25,6 +25,9 @@ Behavior:
 - Stows all first-level package dirs in repo root, excluding ".git" and "mac".
 - On macOS, also stows all first-level package dirs inside "mac/".
 - Package names never contain slashes; we pass --dir to stow.
+- After a successful stow/restow to \$HOME, one-time-initializes the
+  wallpaper config (~/.config/my-wallpapers) if it doesn't exist yet, so
+  a single run of this script is the entire setup.
 EOF
 }
 
@@ -50,7 +53,10 @@ fi
 echo "Repo:   $REPO_DIR"
 echo "Target: $TARGET"
 echo "OS:     $OS"
-echo "Mode:   $ACTION${DRY_RUN:+ (dry-run)}${ADOPT:+ (adopt)}"
+mode_suffix=""
+$DRY_RUN && mode_suffix+=" (dry-run)"
+$ADOPT && mode_suffix+=" (adopt)"
+echo "Mode:   $ACTION$mode_suffix"
 echo
 
 # ---- list packages (names only) -----------------------------------------------
@@ -105,6 +111,19 @@ stow_group "$REPO_DIR" "${common_pkgs[@]}"
 # mac/ packages only on macOS
 if [[ "$OS" == "Darwin" && ${#mac_pkgs[@]} -gt 0 ]]; then
   stow_group "$REPO_DIR/mac" "${mac_pkgs[@]}"
+fi
+
+# ---- one-time wallpaper config init --------------------------------------------
+# Fold wallpaper setup into this single entrypoint: on a real stow/restow to the
+# real $HOME (i.e. not --unstow, --dry-run, or a --target override), seed the
+# wallpaper config the first time so there's no separate manual step to remember.
+if [[ "$ACTION" != "unstow" && "$DRY_RUN" == "false" && "$TARGET" == "$HOME" ]]; then
+  init_script="$REPO_DIR/scripts/.scripts/wallpaper-scripts/init-wallpaper.sh"
+  if [[ -x "$init_script" && ! -f "$HOME/.config/my-wallpapers/.wallpaper_config" ]]; then
+    echo
+    echo "Initializing wallpaper config (first run)..."
+    "$init_script"
+  fi
 fi
 
 echo

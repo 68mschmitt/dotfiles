@@ -39,7 +39,9 @@ Use GNU Stow to symlink configurations into your home directory:
 
 This creates symlinks for every top-level package in this repo (`neovim`,
 `tmux`, `ghostty`, `scripts`, `plover`, `pi`), plus the macOS-specific
-packages under `mac/` (`skhd`, `yabai`) when run on macOS.
+packages under `mac/` (`skhd`, `yabai`) when run on macOS. On first run it
+also seeds the wallpaper config (`~/.config/my-wallpapers/`) automatically—
+this one command is the entire setup, no follow-up steps required.
 
 Options:
 - `--dry-run` - Preview changes without creating symlinks
@@ -113,7 +115,8 @@ Automatic wallpaper rotation with blacklist support, under
 `scripts/.scripts/wallpaper-scripts/`:
 
 - `init-wallpaper.sh` - One-time setup: seeds `~/.config/my-wallpapers/`
-  from the checked-in defaults (run this once after stowing)
+  from the checked-in defaults (run automatically by `stow-dots.sh` the
+  first time; safe to re-run manually too)
 - `set-random-wallpaper.sh` - Set random wallpaper from collection
 - `blacklist-wallpaper.sh` - Add current wallpaper to blacklist
 - `loop-wallpapers.sh` - Automatic rotation daemon
