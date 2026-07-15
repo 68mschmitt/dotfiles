@@ -1,0 +1,88 @@
+# tmux-subagent
+
+Delegate tasks to specialized subagents that run **live in a new, dedicated tmux
+window (a “tab”)** so you can watch them work, while the result still flows back to
+the calling model. A lone subagent gets its own window; parallel tasks share one
+window as equal-width, side-by-side panes — the active pi pane is never split.
+
+pi ships no built-in subagents on purpose — its docs point you at exactly this:
+spawn `pi` instances via tmux, or build it with an extension. This is that extension,
+adapted from pi's official `examples/extensions/subagent` with the children running in
+observable tmux panes instead of a hidden pipe.
+
+## How it works
+
+For each subagent call, the tool:
+
+1. Opens a new dedicated tmux window (`tmux new-window`), named `subagent`/`subagents`
+   in the status bar; parallel tasks split that same window into equal-width,
+   side-by-side panes, each
+   pane titled `subagent: <name>`.
+2. Runs `pi --mode json --no-session [--model …] [--tools …] [--append-system-prompt …] "Task: …"`
+   in that pane.
+3. Pipes pi's JSON event stream through a tiny renderer (`stream-render.mjs`, embedded
+   in `index.ts` and written per-run to a temp dir) that:
+   - pretty-prints the task, tool calls, and streamed assistant text into the pane, and
+   - tees the raw JSONL to a temp file.
+4. Tails that temp file to stream progress into the parent pi TUI and to capture the
+   final assistant message for the calling model.
+5. Detects completion via an `exit.code` sentinel written after the pipe (`set -o pipefail`
+   + `${PIPESTATUS[0]}`), with `agent_end` / pane-death as fallbacks.
+
+`remain-on-exit on` keeps the finished (dead) pane open so you can scroll it. Ctrl+C in
+the parent aborts and kills the pane. When not inside tmux, it falls back to a hidden
+headless run.
+
+## Agents
+
+Markdown files with frontmatter in `~/.pi/agent/agents/*.md` (user) or
+`<project>/.pi/agents/*.md` (project). See the sibling `../../agents/` dir for samples:
+
+| Agent | Purpose | Model | Tools |
+|-------|---------|-------|-------|
+| `scout` | Fast read-only recon | `claude-haiku-4-5` | read, grep, find, ls, bash |
+| `planner` | Implementation plans | `claude-sonnet-4-6` | read, grep, find, ls |
+| `reviewer` | Code / diff review | `claude-sonnet-4-6` | read, grep, find, ls, bash |
+| `worker` | General implementation | (your default) | all default |
+
+```markdown
+---
+name: my-agent
+description: What this agent is for (the parent model reads this to choose it)
+tools: read, grep, find, ls
+model: claude-haiku-4-5
+---
+System prompt for the agent.
+```
+
+## Usage
+
+Single:
+```
+Use the scout subagent to find where the read tool is defined.
+```
+Parallel (one pane each, side-by-side equal width; max 4):
+```
+Run two scouts in parallel: one to map the providers, one to map the tools.
+```
+
+## Tool parameters
+
+| Param | Default | Notes |
+|-------|---------|-------|
+| `agent` + `task` | — | single mode |
+| `tasks: [{agent, task, cwd?}]` | — | parallel mode (max 4 panes) |
+| `agentScope` | `user` | `user` \| `project` \| `both` |
+| `confirmProjectAgents` | `true` | confirm before running repo-controlled agents |
+| `layout` | `h` | `h` = equal-width columns (even-horizontal); `v` = equal-height rows (even-vertical) |
+| `size` | `40%` | deprecated — ignored now that panes open side-by-side in a dedicated window |
+| `focus` | `false` | focus the pane vs. stay in pi |
+| `keepPaneOpen` | `true` | keep the dead pane for review |
+| `timeoutSeconds` | `1800` | kill the subagent after N seconds |
+
+## Security
+
+Running a subagent spawns a `pi` subprocess with a delegated system prompt, model, and
+tools. Project-local agents (`.pi/agents/*.md`) are repo-controlled; they load only with
+`agentScope: "both"` or `"project"`, and you're prompted before they run (unless
+`confirmProjectAgents: false`). Only enable project agents in repos you trust.

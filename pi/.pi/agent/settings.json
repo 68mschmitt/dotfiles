@@ -1,7 +1,33 @@
 {
   "lastChangelogVersion": "0.80.7",
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "max",
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-5",
-  "theme": "dark"
+  "defaultModel": "claude-opus-4-8",
+  "theme": "dark",
+  "expertPanel": {
+    "provider": "anthropic",
+    "model": "claude-opus-4-6",
+    "temperature": 0.7,
+    "thinking": "max"
+  },
+  "packages": [
+    "npm:pi-powerline-footer"
+  ],
+  "workingVibe": "buffy the vampire slayer",
+  "powerline": {
+    "preset": "default",
+    "cost": {
+      "subscriptionDisplay": "both"
+    },
+    "customItems": [
+      {
+        "id": "claudeUsage",
+        "statusKey": "claude-usage",
+        "position": "right",
+        "hideWhenMissing": true
+      }
+    ]
+  },
+  "showHardwareCursor": true,
+  "hideThinkingBlock": false
 }
