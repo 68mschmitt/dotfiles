@@ -1,0 +1,7 @@
+{
+  "lastChangelogVersion": "0.80.7",
+  "defaultThinkingLevel": "high",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-5",
+  "theme": "dark"
+}

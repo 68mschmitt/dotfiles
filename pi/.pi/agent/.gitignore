@@ -1,0 +1,3 @@
+# pi agent — never version-control secrets or transient session logs
+auth.json
+sessions/
