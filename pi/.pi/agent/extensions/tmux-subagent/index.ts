@@ -5,8 +5,9 @@
  * context window. When pi is running inside tmux (the normal case), the child is
  * launched in a NEW, dedicated tmux window (a "tab") — never a split of the
  * active pi pane — so you can watch it work live without disturbing your
- * session: a tiny stream renderer pretty-prints tool calls and streamed text
- * into the pane, while the raw JSONL event stream is tee'd to a file that this
+ * session: a tiny stream renderer paints a styled, navigable session — a header
+ * banner, a dimmed italic thinking block, the bright response, and compact tool
+ * calls — into the pane, while the raw JSONL event stream is tee'd to a file that this
  * extension tails to (a) stream progress into the parent TUI and (b) capture
  * the final result for the calling model. When not inside tmux, it falls back
  * to a hidden headless run.
@@ -16,7 +17,7 @@
  *   - parallel: { tasks: [{ agent, task }, ...] }   (one shared window, equal-width side-by-side panes)
  *
  * Agents are markdown files with frontmatter in ~/.pi/agent/agents/*.md
- * (see agents.ts). Sample agents: scout, planner, reviewer, worker.
+ * (see agents.ts). Sample agents: scout, planner, reviewer, mission-control.
  *
  * This is adapted from pi's official examples/extensions/subagent, with the
  * key difference that children run in observable tmux panes instead of a hidden
@@ -45,6 +46,8 @@ const COLLAPSED_ITEM_COUNT = 10;
 const PER_TASK_OUTPUT_CAP = 50 * 1024;
 const POLL_MS = 200;
 const DEFAULT_TIMEOUT_S = 1800;
+// Keep tmux window (tab) labels short enough to sit comfortably in the status bar.
+const TAB_NAME_MAX = 18;
 
 // ---------------------------------------------------------------------------
 // Formatting helpers (shared with the parent-side TUI renderers)
@@ -288,50 +291,162 @@ function shellQuote(s: string): string {
 
 /**
  * The live stream renderer, written to each child's temp dir and run as
- * `node stream-render.mjs <rawFile>`. It reads pi's --mode json stream on
- * stdin, appends every raw line to <rawFile> (for the parent to parse), and
- * pretty-prints tool calls + streamed assistant text to the pane's tty.
+ * `node stream-render.mjs <rawFile> <agentName> <taskPreview>`. It reads pi's
+ * --mode json stream on stdin, appends every raw line to <rawFile> (for the
+ * parent to parse), and renders a styled, navigable session into the pane's
+ * tty:
+ *   - a header banner (agent + task) framed by a horizontal rule,
+ *   - a dimmed, italic THINKING block with a colored left gutter — visibly the
+ *     model's scratch reasoning, not the answer,
+ *   - a bright RESPONSE block (the ultimate answer),
+ *   - compact tool-call lines (\u2192 verb args) with \u2713/\u2717 result previews.
+ * Blocks are separated by blank lines and consistent colors so the scrollback
+ * reads like a document rather than a wall of white text.
  *
  * IMPORTANT: keep this source free of backticks and ${...} so it can live
  * inside the template literal below without escaping. ESC is built via
- * String.fromCharCode(27) for the same reason.
+ * String.fromCharCode(27) for the same reason; runtime newlines/unicode are
+ * written as \\n / \\uXXXX so they survive the enclosing template literal.
  */
 const RENDERER_SOURCE = `
 import fs from "node:fs";
 
 const ESC = String.fromCharCode(27);
 const rawPath = process.argv[2];
+const agentName = process.argv[3] || "subagent";
+const taskText = process.argv[4] || "";
 const out = process.stdout;
 const color = (code, s) => ESC + "[" + code + "m" + s + ESC + "[0m";
 
-let buffer = "";
-let inText = false;
+// Palette (256-color SGR; tuned for dark terminal backgrounds).
+const C_TITLE = "1;36";          // banner title
+const C_AGENT = "1;38;5;80";     // agent name
+const C_TASK = "38;5;250";       // task line
+const C_DIM = "38;5;245";        // secondary text / result previews
+const C_RULE = "38;5;238";       // horizontal rules
+const C_THINK_H = "1;38;5;146";  // thinking header
+const C_THINK = "3;38;5;146";    // thinking body (italic)
+const C_BAR = "38;5;103";        // thinking left gutter
+const C_RESP_H = "1;38;5;114";   // response header
+const C_TOOL = "36";             // tool keyword
+const C_ARG = "38;5;250";        // tool argument
+const C_OK = "1;32";
+const C_ERR = "1;31";
 
+let buffer = "";
+let mode = null;            // null | "thinking" | "response"
+let atLineStart = true;
+let printedAnything = false;
+let lastBlock = null;       // "banner" | "thinking" | "response" | "tool"
+
+function width() {
+  const c = out.columns || 80;
+  return Math.max(20, Math.min(c, 100));
+}
+function rule() {
+  let s = "";
+  const w = width();
+  for (let i = 0; i < w; i++) s += "\\u2500";
+  return color(C_RULE, s);
+}
 function shortenPath(p) {
   const home = process.env.HOME || "";
   return home && p.indexOf(home) === 0 ? "~" + p.slice(home.length) : p;
 }
 
-function fmtTool(name, args) {
-  args = args || {};
-  if (name === "bash") {
-    let cmd = String(args.command || "...");
-    if (cmd.length > 72) cmd = cmd.slice(0, 72) + "...";
-    return color("2", "$ ") + cmd;
-  }
-  if (name === "read") return color("2", "read ") + shortenPath(String(args.file_path || args.path || "..."));
-  if (name === "write") return color("2", "write ") + shortenPath(String(args.file_path || args.path || "..."));
-  if (name === "edit") return color("2", "edit ") + shortenPath(String(args.file_path || args.path || "..."));
-  if (name === "ls") return color("2", "ls ") + shortenPath(String(args.path || "."));
-  if (name === "find") return color("2", "find ") + String(args.pattern || "*") + color("2", " in " + shortenPath(String(args.path || ".")));
-  if (name === "grep") return color("2", "grep /") + String(args.pattern || "") + color("2", "/ in " + shortenPath(String(args.path || ".")));
-  let a = JSON.stringify(args);
-  if (a && a.length > 60) a = a.slice(0, 60) + "...";
-  return name + " " + color("2", a || "");
+function banner() {
+  out.write("\\n" + color(C_TITLE, "\\u25b6 subagent") + color(C_DIM, " \\u00b7 ") + color(C_AGENT, agentName) + "\\n");
+  if (taskText) out.write(color(C_TASK, "  " + taskText) + "\\n");
+  out.write(rule() + "\\n");
+  printedAnything = true;
+  lastBlock = "banner";
 }
 
-function endText() {
-  if (inText) { out.write("\\n"); inText = false; }
+// Vertical spacing before a new logical block; consecutive tool lines stay tight.
+function block(type) {
+  if (!atLineStart) { out.write("\\n"); atLineStart = true; }
+  if (printedAnything && !(lastBlock === "tool" && type === "tool")) out.write("\\n");
+  printedAnything = true;
+  lastBlock = type;
+}
+
+function enterMode(m) {
+  if (mode === m) return;
+  block(m);
+  out.write((m === "thinking" ? color(C_THINK_H, "\\u273b thinking") : color(C_RESP_H, "\\u25cf response")) + "\\n");
+  atLineStart = true;
+  mode = m;
+}
+
+function endBlock() {
+  if (mode && !atLineStart) out.write("\\n");
+  atLineStart = true;
+  mode = null;
+}
+
+// Thinking: italic + dim with a colored left gutter, so it reads as the model's
+// scratch reasoning and never gets confused with the final answer.
+function writeThinking(text) {
+  if (!text) return;
+  const gutter = color(C_BAR, "\\u2502 ");
+  const parts = text.split("\\n");
+  for (let k = 0; k < parts.length; k++) {
+    if (k > 0) { out.write("\\n"); atLineStart = true; }
+    const seg = parts[k];
+    if (seg) {
+      if (atLineStart) { out.write(gutter); atLineStart = false; }
+      out.write(color(C_THINK, seg));
+    }
+  }
+}
+
+// Response: bright, unadorned text — the ultimate answer.
+function writeResponse(text) {
+  if (!text) return;
+  out.write(text);
+  atLineStart = text.charAt(text.length - 1) === "\\n";
+}
+
+function fmtTool(name, args) {
+  args = args || {};
+  const k = (s) => color(C_TOOL, s);
+  const a = (s) => color(C_ARG, s);
+  if (name === "bash") {
+    let cmd = String(args.command || "...");
+    if (cmd.length > 72) cmd = cmd.slice(0, 72) + "\\u2026";
+    return k("$ ") + a(cmd);
+  }
+  if (name === "read") return k("read ") + a(shortenPath(String(args.file_path || args.path || "...")));
+  if (name === "write") return k("write ") + a(shortenPath(String(args.file_path || args.path || "...")));
+  if (name === "edit") return k("edit ") + a(shortenPath(String(args.file_path || args.path || "...")));
+  if (name === "ls") return k("ls ") + a(shortenPath(String(args.path || ".")));
+  if (name === "find") return k("find ") + a(String(args.pattern || "*")) + color(C_DIM, " in " + shortenPath(String(args.path || ".")));
+  if (name === "grep") return k("grep ") + a("/" + String(args.pattern || "") + "/") + color(C_DIM, " in " + shortenPath(String(args.path || ".")));
+  let j = "";
+  try { j = JSON.stringify(args); } catch { j = ""; }
+  if (j && j.length > 60) j = j.slice(0, 60) + "\\u2026";
+  return k(name) + (j ? " " + a(j) : "");
+}
+
+function collectText(arr) {
+  const parts = [];
+  try { for (const p of arr) if (p && typeof p.text === "string") parts.push(p.text); } catch {}
+  return parts.join(" ");
+}
+function previewResult(r) {
+  try {
+    if (r == null) return "";
+    let s = "";
+    if (typeof r === "string") s = r;
+    else if (Array.isArray(r)) s = collectText(r);
+    else if (r.content) s = typeof r.content === "string" ? r.content : collectText(r.content);
+    else if (typeof r.output === "string") s = r.output;
+    else if (typeof r.text === "string") s = r.text;
+    s = String(s).replace(/\\s+/g, " ").trim();
+    if (!s) return "";
+    if (s.length > 96) s = s.slice(0, 96) + "\\u2026";
+    return s;
+  } catch { return ""; }
 }
 
 function handle(line) {
@@ -339,28 +454,32 @@ function handle(line) {
   let e;
   try { e = JSON.parse(line); } catch { return; }
   const t = e.type;
-  if (t === "message_end" && e.message && e.message.role === "user") {
-    const content = e.message.content || [];
-    for (const p of content) {
-      if (p.type === "text") {
-        const oneLine = String(p.text).replace(/\\s+/g, " ").slice(0, 240);
-        out.write("\\n" + color("1;35", "\\u25b6 task ") + color("2", oneLine) + "\\n\\n");
-      }
-    }
-  } else if (t === "message_update" && e.assistantMessageEvent) {
+  if (t === "message_update" && e.assistantMessageEvent) {
     const ev = e.assistantMessageEvent;
-    if (ev.type === "text_delta") { inText = true; out.write(ev.delta || ""); }
-    else if (ev.type === "text_end") endText();
+    const et = ev.type;
+    if (et === "thinking_start") enterMode("thinking");
+    else if (et === "thinking_delta") { enterMode("thinking"); writeThinking(ev.delta || ""); }
+    else if (et === "thinking_end") endBlock();
+    else if (et === "text_start") enterMode("response");
+    else if (et === "text_delta") { enterMode("response"); writeResponse(ev.delta || ""); }
+    else if (et === "text_end") endBlock();
   } else if (t === "tool_execution_start") {
-    endText();
-    out.write(color("36", "\\u2192 ") + fmtTool(e.toolName, e.args) + "\\n");
+    endBlock();
+    block("tool");
+    out.write(color(C_TOOL, "\\u2192 ") + fmtTool(e.toolName, e.args) + "\\n");
+    atLineStart = true;
   } else if (t === "tool_execution_end") {
-    out.write("  " + (e.isError ? color("31", "\\u2717 error") : color("32", "\\u2713 ok")) + "\\n");
+    let line = "  " + (e.isError ? color(C_ERR, "\\u2717") : color(C_OK, "\\u2713"));
+    const pv = previewResult(e.result);
+    if (pv) line += " " + color(C_DIM, pv);
+    out.write(line + "\\n");
+    atLineStart = true;
   } else if (t === "agent_end") {
-    endText();
+    endBlock();
   }
 }
 
+banner();
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (d) => {
   try { fs.appendFileSync(rawPath, d); } catch {}
@@ -369,7 +488,11 @@ process.stdin.on("data", (d) => {
   buffer = lines.pop() || "";
   for (const line of lines) handle(line);
 });
-process.stdin.on("end", () => { if (buffer) handle(buffer); endText(); });
+process.stdin.on("end", () => {
+  if (buffer) handle(buffer);
+  endBlock();
+  out.write("\\n" + rule() + "\\n");
+});
 `;
 
 // ---------------------------------------------------------------------------
@@ -393,6 +516,46 @@ function tmuxPaneState(paneId: string): { exists: boolean; dead: boolean } {
 		if (id === paneId) return { exists: true, dead: dead === "1" };
 	}
 	return { exists: false, dead: false };
+}
+
+// ---------------------------------------------------------------------------
+// tmux tab (window) naming
+// ---------------------------------------------------------------------------
+
+/**
+ * Make a string safe and compact for a tmux window name shown in the status
+ * bar: collapse any run of characters outside [A-Za-z0-9._-] to a single dash
+ * (this also neutralizes tmux status-format-special chars such as '#', '{',
+ * '}', '[') and trim stray separators. Spaces become dashes so the bar stays
+ * tidy.
+ */
+function sanitizeTabPart(s: string): string {
+	return s
+		.replace(/[^\w.-]+/g, "-")
+		.replace(/-{2,}/g, "-")
+		.replace(/^[-.]+|[-.]+$/g, "");
+}
+
+/**
+ * A short label identifying the calling pi session: the user-set session name
+ * if there is one, otherwise the working directory's basename (the project).
+ */
+function callerLabel(sessionName: string | undefined, cwd: string): string {
+	const raw = (sessionName && sessionName.trim()) || path.basename(cwd) || "pi";
+	return sanitizeTabPart(raw) || "pi";
+}
+
+/**
+ * Build the tmux window (tab) label for a subagent run as "<caller>/<suffix>",
+ * e.g. "dotfiles/scout" or "my-app/3x". The suffix (what's running) is given
+ * priority; the caller label fills whatever budget is left so the whole label
+ * stays within TAB_NAME_MAX and fits the status bar.
+ */
+function buildTabName(sessionName: string | undefined, cwd: string, suffix: string): string {
+	const suf = sanitizeTabPart(suffix);
+	const slugBudget = Math.max(4, TAB_NAME_MAX - (suf ? suf.length + 1 : 0));
+	const slug = callerLabel(sessionName, cwd).slice(0, slugBudget);
+	return suf ? `${slug}/${suf}` : slug;
 }
 
 interface PaneGroupOptions {
@@ -492,14 +655,17 @@ async function buildChildWorkspace(agent: AgentConfig, task: string): Promise<Ch
 	const nodeQ = shellQuote(process.execPath);
 	const taskPreview = task.replace(/\s+/g, " ").slice(0, 200);
 
+	// The banner + closing rule are drawn by the renderer (it knows the pane
+	// width); the run script only appends a colored exit-status footer. NOTE:
+	// /usr/bin/env bash may be bash 3.2 (macOS), which does NOT expand \u in
+	// printf — so the footer uses literal glyphs (✓ ✗ ·) and octal \033 for ESC.
 	const script = [
 		"#!/usr/bin/env bash",
 		"set -o pipefail",
-		`printf '\\033[1;36m▶ subagent: %s\\033[0m\\n\\033[2m%s\\033[0m\\n\\n' ${shellQuote(agent.name)} ${shellQuote(taskPreview)}`,
-		`${piCmd} 2> ${shellQuote(errPath)} | ${nodeQ} ${shellQuote(rendererPath)} ${shellQuote(rawPath)}`,
+		`${piCmd} 2> ${shellQuote(errPath)} | ${nodeQ} ${shellQuote(rendererPath)} ${shellQuote(rawPath)} ${shellQuote(agent.name)} ${shellQuote(taskPreview)}`,
 		"ec=${PIPESTATUS[0]}",
 		`printf '%s' "$ec" > ${shellQuote(exitPath)}`,
-		`printf '\\n\\033[2m── subagent finished (exit %s) ──\\033[0m\\n' "$ec"`,
+		`if [ "$ec" = 0 ]; then printf '\\033[1;32m✓ finished\\033[0m\\033[38;5;245m · exit %s\\033[0m\\n' "$ec"; else printf '\\033[1;31m✗ failed\\033[0m\\033[38;5;245m · exit %s\\033[0m\\n' "$ec"; fi`,
 		"",
 	].join("\n");
 	await fs.promises.writeFile(runPath, script, { encoding: "utf-8", mode: 0o755 });
@@ -907,8 +1073,14 @@ export default function (pi: ExtensionAPI) {
 					});
 				};
 
-				// All parallel subagents share ONE new window (tab); panes tile live.
-				const group = new PaneGroup({ windowName: "subagents", focus: opts.focus, layout: opts.layout });
+				// All parallel subagents share ONE new window (tab), labeled after the
+				// calling session (+ task count) so you can tell whose subagents these are.
+				const windowName = buildTabName(
+					ctx.sessionManager.getSessionName?.(),
+					ctx.cwd,
+					`${params.tasks.length}x`,
+				);
+				const group = new PaneGroup({ windowName, focus: opts.focus, layout: opts.layout });
 				const settled = await Promise.all(
 					params.tasks.map(async (t, i) => {
 						const r = await runOne(agents, t.agent, t.task, t.cwd ?? ctx.cwd, opts, group, signal, (updated) => {
@@ -940,8 +1112,14 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			// ---- Single mode ---------------------------------------------------
-			// A lone subagent gets its own dedicated new window (tab).
-			const singleGroup = new PaneGroup({ windowName: "subagent", focus: opts.focus, layout: opts.layout });
+			// A lone subagent gets its own dedicated new window (tab), labeled after the
+			// calling session and the agent it runs (e.g. "dotfiles/scout").
+			const windowName = buildTabName(
+				ctx.sessionManager.getSessionName?.(),
+				ctx.cwd,
+				params.agent as string,
+			);
+			const singleGroup = new PaneGroup({ windowName, focus: opts.focus, layout: opts.layout });
 			const result = await runOne(
 				agents,
 				params.agent as string,

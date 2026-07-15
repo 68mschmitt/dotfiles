@@ -14,15 +14,22 @@ observable tmux panes instead of a hidden pipe.
 
 For each subagent call, the tool:
 
-1. Opens a new dedicated tmux window (`tmux new-window`), named `subagent`/`subagents`
-   in the status bar; parallel tasks split that same window into equal-width,
-   side-by-side panes, each
-   pane titled `subagent: <name>`.
+1. Opens a new dedicated tmux window (`tmux new-window`) whose status-bar label is
+   derived from the **calling session** — the session name if set, else the project
+   directory basename — plus a short suffix: `<caller>/<agent>` for a single run
+   (e.g. `dotfiles/scout`) or `<caller>/<N>x` for parallel (e.g. `dotfiles/3x`). The
+   label is sanitized of status-bar-special characters and capped (~18 chars) so it
+   fits the status bar. Parallel tasks split that same window into equal-width,
+   side-by-side panes, each pane titled `subagent: <name>`.
 2. Runs `pi --mode json --no-session [--model …] [--tools …] [--append-system-prompt …] "Task: …"`
    in that pane.
 3. Pipes pi's JSON event stream through a tiny renderer (`stream-render.mjs`, embedded
    in `index.ts` and written per-run to a temp dir) that:
-   - pretty-prints the task, tool calls, and streamed assistant text into the pane, and
+   - renders a **styled, navigable session** into the pane rather than a wall of white
+     text: a header banner (agent + task), a dimmed italic **thinking** block with a
+     `│` left gutter (clearly the model's scratch reasoning, not the answer), the
+     bright **response** block, and compact `→ tool` lines with `✓`/`✗` result
+     previews — all separated by blank lines and framed with horizontal rules, and
    - tees the raw JSONL to a temp file.
 4. Tails that temp file to stream progress into the parent pi TUI and to capture the
    final assistant message for the calling model.
@@ -43,7 +50,7 @@ Markdown files with frontmatter in `~/.pi/agent/agents/*.md` (user) or
 | `scout` | Fast read-only recon | `claude-haiku-4-5` | read, grep, find, ls, bash |
 | `planner` | Implementation plans | `claude-sonnet-4-6` | read, grep, find, ls |
 | `reviewer` | Code / diff review | `claude-sonnet-4-6` | read, grep, find, ls, bash |
-| `worker` | General implementation | (your default) | all default |
+| `mission-control` | General implementation (flight-controller discipline) | (your default) | all default |
 
 ```markdown
 ---
