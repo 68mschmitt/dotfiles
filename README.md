@@ -160,6 +160,7 @@ Located in `scripts/.scripts/qol/`:
 
 Located in `scripts/.scripts/fun/`:
 - `cowsay-loop.sh` - Endless wisdom from the cow
+- `cowfetch` - fastfetch with colorful cowsay ASCII art (via lolcat)
 - `fastfetch_demo.sh` - Demo of fastfetch's output styles
 
 ## Customization
@@ -180,8 +181,9 @@ cp ~/.gitconfig git/.gitconfig
 ## Requirements
 
 - **GNU Stow**
-- **macOS** for the `mac/` packages (skhd, yabai); everything else is
-  platform-agnostic
+- **macOS** for the `mac/` packages (skhd, yabai) and the wallpaper scripts
+  (they use `osascript`); the rest (neovim, tmux, ghostty, pi, plover,
+  git/qol/fun scripts) is platform-agnostic
 
 ## Maintenance
 
