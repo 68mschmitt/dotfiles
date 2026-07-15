@@ -72,7 +72,6 @@ dotfiles/
 ├── mac/                    # macOS-specific configurations
 │   ├── skhd/              # Keyboard shortcuts
 │   ├── yabai/             # Window manager settings
-│   ├── .zshrc             # Shell configuration
 │   ├── install-deps.sh    # Dependency installer
 │   └── packages.list      # Homebrew packages
 ├── neovim/                # Neovim configuration
