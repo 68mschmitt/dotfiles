@@ -2,9 +2,6 @@
 
 ---
 
-# `./dwm`
-- Scripts specific to my rice of `DWM`
-
 # `./fun`
 - Nothing functional, just for fun
 

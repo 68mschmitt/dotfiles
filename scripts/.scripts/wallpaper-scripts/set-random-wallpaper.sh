@@ -39,22 +39,8 @@ fi
 # Pick random image
 random_image="${images[RANDOM % ${#images[@]}]}"
 
-# ✅ Detect platform and set wallpaper
-uname_out="$(uname)"
-case "$uname_out" in
-    Darwin)
-        # desktoppr $random_image
-        osascript -e "tell application \"System Events\" to tell every desktop to set picture to \"$random_image\" as POSIX file"
-        # osascript -e "tell application \"System Events\" to tell every desktop to set picture to POSIX file \"$random_image\""
-        ;;
-    Linux)
-        feh --bg-scale "$random_image"
-        ;;
-    *)
-        echo "❌ Unsupported OS: $uname_out"
-        exit 1
-        ;;
-esac
+# Set the wallpaper (macOS only)
+osascript -e "tell application \"System Events\" to tell every desktop to set picture to \"$random_image\" as POSIX file"
 
 # Save to current wallpaper tracker
 mkdir -p "$CONFIG_DIR"

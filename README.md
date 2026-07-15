@@ -118,7 +118,7 @@ Automatic wallpaper rotation with blacklist support, under
 - `blacklist-wallpaper.sh` - Add current wallpaper to blacklist
 - `loop-wallpapers.sh` - Automatic rotation daemon
 - `pull-wallpapers.sh` - Clone/update configured wallpaper source repos
-- Supports both macOS (AppleScript) and Linux (feh)
+- macOS only (uses `osascript`)
 
 The checked-in files under `default-configs/` are just templates; your
 actual config, blacklist, and current-wallpaper state live untracked in
