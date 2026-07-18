@@ -14,8 +14,10 @@
  *     `extra_usage`), both of which describe the same dollar-denominated cap.
  *
  * The status is published via ctx.ui.setStatus("claude-usage", ...), so it shows
- * up in whatever footer is active. With pi-powerline-footer, promote it to a
- * dedicated segment via `powerline.customItems` (see settings.json).
+ * up in whatever footer is active. It is only published while the active model
+ * provider is `anthropic` and an Anthropic OAuth credential is configured. With
+ * pi-powerline-footer, promote it to a dedicated segment via
+ * `powerline.customItems` (see settings.json).
  *
  * NOTE: /api/oauth/usage is an undocumented endpoint that rate-limits hard if
  * polled. This extension only fetches on session start and after the agent
@@ -25,10 +27,11 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { readFile, writeFile } from "node:fs/promises";
-import { CONFIG_DIR_NAME, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { CONFIG_DIR_NAME, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 // ── Tunables ────────────────────────────────────────────────────────────────
 const STATUS_KEY = "claude-usage";
+const PROVIDER = "anthropic";
 const LABEL = "credits";
 const USAGE_URL = "https://api.anthropic.com/api/oauth/usage";
 const OAUTH_BETA = "oauth-2025-04-20";
@@ -101,7 +104,7 @@ async function readToken(): Promise<string | null> {
 	try {
 		const raw = await readFile(AUTH_PATH, "utf8");
 		const auth = JSON.parse(raw);
-		const a = auth?.anthropic;
+		const a = auth?.[PROVIDER];
 		if (a?.type === "oauth" && typeof a.access === "string") return a.access;
 	} catch {
 		// no auth file / not oauth
@@ -114,10 +117,22 @@ export default function (pi: ExtensionAPI) {
 	let cooldownUntil = 0;
 	let inFlight = false;
 	let lastText: string | undefined;
+	let credentialPresent = false;
 	let controller: AbortController | undefined;
 
-	const publish = (setStatus: (k: string, t: string | undefined) => void) => {
-		if (lastText !== undefined) setStatus(STATUS_KEY, lastText);
+	const isActiveProvider = (ctx: ExtensionContext) => ctx.model?.provider === PROVIDER;
+	const clear = (ctx: ExtensionContext) => ctx.ui.setStatus(STATUS_KEY, undefined);
+	const publish = (ctx: ExtensionContext) => {
+		if (!ctx.hasUI) return;
+		if (!isActiveProvider(ctx) || !credentialPresent || lastText === undefined) {
+			clear(ctx);
+			return;
+		}
+		ctx.ui.setStatus(STATUS_KEY, lastText);
+	};
+	const refreshCredentialPresence = async () => {
+		credentialPresent = (await readToken()) !== null;
+		return credentialPresent;
 	};
 
 	async function loadCache(): Promise<void> {
@@ -152,6 +167,7 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		const token = await readToken();
+		credentialPresent = token !== null;
 		if (!token) return "no Claude OAuth token in auth.json";
 
 		inFlight = true;
@@ -194,22 +210,37 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	// Refresh + publish, respecting throttle. Fire-and-forget from events.
-	const maybeRefresh = (ctx: any, opts: { force?: boolean } = {}) => {
+	const maybeRefresh = (ctx: ExtensionContext, opts: { force?: boolean } = {}) => {
 		if (!ctx.hasUI) return;
-		const now = Date.now();
-		if (!opts.force && lastText !== undefined && now - lastFetchTs < STALE_MS) {
-			publish(ctx.ui.setStatus.bind(ctx.ui));
+		if (!isActiveProvider(ctx)) {
+			clear(ctx);
 			return;
 		}
-		void fetchUsage(opts).then(() => publish(ctx.ui.setStatus.bind(ctx.ui)));
+		void (async () => {
+			if (!(await refreshCredentialPresence())) {
+				clear(ctx);
+				return;
+			}
+			const now = Date.now();
+			if (!opts.force && lastText !== undefined && now - lastFetchTs < STALE_MS) {
+				publish(ctx);
+				return;
+			}
+			await fetchUsage(opts);
+			publish(ctx);
+		})();
 	};
 
 	pi.on("session_start", async (_event, ctx) => {
 		if (!ctx.hasUI) return;
 		await loadCache();
-		publish(ctx.ui.setStatus.bind(ctx.ui)); // show cached value immediately
+		await refreshCredentialPresence();
+		publish(ctx); // show cached value immediately, but only for active Anthropic OAuth sessions
 		maybeRefresh(ctx); // then refresh if stale
 	});
+
+	// Hide/show immediately when switching away from or back to Anthropic.
+	pi.on("model_select", async (_event, ctx) => maybeRefresh(ctx));
 
 	// Usage credits move when you exceed plan limits; refresh after each settle.
 	pi.on("agent_settled", async (_event, ctx) => maybeRefresh(ctx));
@@ -222,7 +253,7 @@ export default function (pi: ExtensionAPI) {
 		description: "Refresh and show Claude subscription usage-credits spend",
 		handler: async (_args, ctx) => {
 			const summary = await fetchUsage({ force: true });
-			publish(ctx.ui.setStatus.bind(ctx.ui));
+			publish(ctx);
 			ctx.ui.notify(`Claude usage: ${summary}`, "info");
 		},
 	});

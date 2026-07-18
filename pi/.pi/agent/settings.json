@@ -1,6 +1,6 @@
 {
-  "lastChangelogVersion": "0.80.7",
-  "defaultThinkingLevel": "high",
+  "lastChangelogVersion": "0.80.10",
+  "defaultThinkingLevel": "xhigh",
   "defaultProvider": "anthropic",
   "defaultModel": "claude-opus-4-8",
   "theme": "dark",
@@ -23,6 +23,12 @@
       {
         "id": "claudeUsage",
         "statusKey": "claude-usage",
+        "position": "right",
+        "hideWhenMissing": true
+      },
+      {
+        "id": "openaiUsage",
+        "statusKey": "openai-usage",
         "position": "right",
         "hideWhenMissing": true
       }
