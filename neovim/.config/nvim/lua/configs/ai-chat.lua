@@ -20,7 +20,7 @@ local marginalia = {
 local ai_chat = {
     "68mschmitt/ai-chat.nvim",
     cmd = { "AiChat", "AiChatOpen", "AiChatSend" },
-    -- dev = true,
+    dev = true,
     keys = { "<leader>aa", "<leader>ac" },
     config = function()
         require("ai-chat").setup({
