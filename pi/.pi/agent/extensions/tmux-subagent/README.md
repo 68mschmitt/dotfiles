@@ -1,9 +1,11 @@
 # tmux-subagent
 
-Delegate tasks to specialized subagents that run **live in a new, dedicated tmux
-window (a “tab”)** so you can watch them work, while the result still flows back to
-the calling model. A lone subagent gets its own window; parallel tasks share one
-window as equal-width, side-by-side panes — the active pi pane is never split.
+Delegate tasks to specialized subagents. By default this install is configured to
+run them **headless**; set `tmuxSubagent.defaultTransport` to `"auto"` or `"tmux"`
+to run them live in a new, dedicated tmux window (a “tab”) so you can watch them
+work while the result still flows back to the calling model. A lone visible
+subagent gets its own window; visible parallel tasks share one window as panes —
+the active pi pane is never split.
 
 pi ships no built-in subagents on purpose — its docs point you at exactly this:
 spawn `pi` instances via tmux, or build it with an extension. This is that extension,
@@ -14,7 +16,10 @@ observable tmux panes instead of a hidden pipe.
 
 For each subagent call, the tool:
 
-1. Opens a new dedicated tmux window (`tmux new-window`) whose status-bar label is
+0. Resolves the transport from the tool call's `transport` parameter, falling back
+   to `tmuxSubagent.defaultTransport` in settings.json (`"auto"` by default):
+   `"hidden"` runs headless; `"auto"`/`"tmux"` use tmux when available.
+1. When using tmux, opens a new dedicated tmux window (`tmux new-window`) whose status-bar label is
    derived from the **calling session** — the session name if set, else the project
    directory basename — plus a short suffix: `<caller>/<agent>` for a single run
    (e.g. `dotfiles/scout`) or `<caller>/<N>x` for parallel (e.g. `dotfiles/3x`). The
@@ -37,8 +42,8 @@ For each subagent call, the tool:
    + `${PIPESTATUS[0]}`), with `agent_end` / pane-death as fallbacks.
 
 `remain-on-exit on` keeps the finished (dead) pane open so you can scroll it. Ctrl+C in
-the parent aborts and kills the pane. When not inside tmux, it falls back to a hidden
-headless run.
+the parent aborts and kills the pane. With `"hidden"` transport, or when not inside
+tmux, it uses a hidden headless run.
 
 ## Agents
 
@@ -62,13 +67,34 @@ model: claude-haiku-4-5
 System prompt for the agent.
 ```
 
+## Settings
+
+Configure defaults in `~/.pi/agent/settings.json` (or a trusted project
+`.pi/settings.json`):
+
+```json
+{
+  "tmuxSubagent": {
+    "defaultTransport": "hidden"
+  }
+}
+```
+
+`defaultTransport` values:
+- `"hidden"` — never open a tmux tab/pane; run the child headless.
+- `"auto"` — use tmux when `$TMUX` is present; otherwise headless.
+- `"tmux"` — request tmux when available; falls back to headless outside tmux.
+
+Optional defaults for existing tool parameters are also supported:
+`layout`, `focus`, `keepPaneOpen`, and `timeoutSeconds`.
+
 ## Usage
 
 Single:
 ```
 Use the scout subagent to find where the read tool is defined.
 ```
-Parallel (one pane each, side-by-side equal width; max 4):
+Parallel (visible transport: one pane each, side-by-side equal width; max 4):
 ```
 Run two scouts in parallel: one to map the providers, one to map the tools.
 ```
@@ -81,11 +107,12 @@ Run two scouts in parallel: one to map the providers, one to map the tools.
 | `tasks: [{agent, task, cwd?}]` | — | parallel mode (max 4 panes) |
 | `agentScope` | `user` | `user` \| `project` \| `both` |
 | `confirmProjectAgents` | `true` | confirm before running repo-controlled agents |
-| `layout` | `h` | `h` = equal-width columns (even-horizontal); `v` = equal-height rows (even-vertical) |
+| `layout` | settings or `h` | `h` = equal-width columns (even-horizontal); `v` = equal-height rows (even-vertical) |
+| `transport` | settings or `auto` | `auto`/`tmux` use tmux when available; `hidden` never opens a tmux tab/pane |
 | `size` | `40%` | deprecated — ignored now that panes open side-by-side in a dedicated window |
-| `focus` | `false` | focus the pane vs. stay in pi |
-| `keepPaneOpen` | `true` | keep the dead pane for review |
-| `timeoutSeconds` | `1800` | kill the subagent after N seconds |
+| `focus` | settings or `false` | focus the pane vs. stay in pi |
+| `keepPaneOpen` | settings or `true` | keep the dead pane for review |
+| `timeoutSeconds` | settings or `1800` | kill the subagent after N seconds |
 
 ## Security
 

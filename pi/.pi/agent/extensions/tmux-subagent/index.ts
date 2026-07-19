@@ -1,27 +1,25 @@
 /**
- * tmux Subagent Tool — delegate tasks to specialized agents in visible tmux panes.
+ * tmux Subagent Tool — delegate tasks to specialized agents.
  *
  * Each subagent runs as a separate `pi --mode json` process with an isolated
- * context window. When pi is running inside tmux (the normal case), the child is
- * launched in a NEW, dedicated tmux window (a "tab") — never a split of the
- * active pi pane — so you can watch it work live without disturbing your
- * session: a tiny stream renderer paints a styled, navigable session — a header
- * banner, a dimmed italic thinking block, the bright response, and compact tool
- * calls — into the pane, while the raw JSONL event stream is tee'd to a file that this
- * extension tails to (a) stream progress into the parent TUI and (b) capture
- * the final result for the calling model. When not inside tmux, it falls back
- * to a hidden headless run.
+ * context window. The default child transport is configured by
+ * `tmuxSubagent.defaultTransport` in settings.json. With the "auto"/"tmux"
+ * transport inside tmux, the child is launched in a NEW, dedicated tmux window
+ * (a "tab") — never a split of the active pi pane — so you can watch it work
+ * live. With the "hidden" transport, or when tmux is unavailable, it runs
+ * headless.
  *
  * Modes:
- *   - single:   { agent, task }                     (its own new window/tab)
- *   - parallel: { tasks: [{ agent, task }, ...] }   (one shared window, equal-width side-by-side panes)
+ *   - single:   { agent, task }
+ *   - parallel: { tasks: [{ agent, task }, ...] }
  *
  * Agents are markdown files with frontmatter in ~/.pi/agent/agents/*.md
  * (see agents.ts). Sample agents: scout, planner, reviewer, mission-control.
  *
- * This is adapted from pi's official examples/extensions/subagent, with the
- * key difference that children run in observable tmux panes instead of a hidden
- * pipe. See docs/tmux.md and the "No sub-agents" section of pi's README.
+ * This is adapted from pi's official examples/extensions/subagent. The child
+ * transport is settings-controlled via tmuxSubagent.defaultTransport in
+ * settings.json: "auto" preserves the observable tmux-pane behavior, while
+ * "hidden" uses a headless pipe even inside tmux.
  */
 
 import { spawn, spawnSync } from "node:child_process";
@@ -48,6 +46,21 @@ const POLL_MS = 200;
 const DEFAULT_TIMEOUT_S = 1800;
 // Keep tmux window (tab) labels short enough to sit comfortably in the status bar.
 const TAB_NAME_MAX = 18;
+const SETTINGS_KEY = "tmuxSubagent";
+const DEFAULT_TRANSPORT: TransportPreference = "auto";
+
+type TransportPreference = "auto" | "tmux" | "hidden";
+type ResolvedTransport = "tmux" | "hidden";
+
+interface ExtensionSettings {
+	/** Default transport preference for subagent calls. */
+	defaultTransport?: TransportPreference;
+	/** Optional defaults for existing tool parameters. Tool-call parameters still win. */
+	layout?: "h" | "v";
+	focus?: boolean;
+	keepPaneOpen?: boolean;
+	timeoutSeconds?: number;
+}
 
 // ---------------------------------------------------------------------------
 // Formatting helpers (shared with the parent-side TUI renderers)
@@ -151,7 +164,7 @@ interface SingleResult {
 	model?: string;
 	stopReason?: string;
 	errorMessage?: string;
-	transport: "tmux" | "hidden";
+	transport: ResolvedTransport;
 	paneId?: string;
 }
 
@@ -501,6 +514,59 @@ process.stdin.on("end", () => {
 
 function insideTmux(): boolean {
 	return Boolean(process.env.TMUX);
+}
+
+function resolveTransportPreference(preference: TransportPreference): ResolvedTransport {
+	if (preference === "hidden") return "hidden";
+	// "auto" and "tmux" both use tmux only when it is actually available. Outside
+	// tmux, child pi processes continue to run headless instead of failing.
+	return insideTmux() ? "tmux" : "hidden";
+}
+
+function readJsonObject(filePath: string): Record<string, unknown> | undefined {
+	try {
+		const raw = fs.readFileSync(filePath, "utf-8");
+		const parsed = JSON.parse(raw);
+		if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+	} catch {
+		/* ignore missing or invalid extension settings */
+	}
+	return undefined;
+}
+
+function normalizeTransportPreference(value: unknown): TransportPreference | undefined {
+	if (value === "auto" || value === "tmux" || value === "hidden") return value;
+	return undefined;
+}
+
+function normalizeSettings(value: unknown): ExtensionSettings {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+	const raw = value as Record<string, unknown>;
+	const settings: ExtensionSettings = {};
+
+	// Preferred setting: { "tmuxSubagent": { "defaultTransport": "hidden" } }.
+	// Also accept { transport } and { openInTmux } as easy-to-guess aliases.
+	settings.defaultTransport =
+		normalizeTransportPreference(raw.defaultTransport) ??
+		normalizeTransportPreference(raw.transport) ??
+		(typeof raw.openInTmux === "boolean" ? (raw.openInTmux ? "auto" : "hidden") : undefined);
+
+	if (raw.layout === "h" || raw.layout === "v") settings.layout = raw.layout;
+	if (typeof raw.focus === "boolean") settings.focus = raw.focus;
+	if (typeof raw.keepPaneOpen === "boolean") settings.keepPaneOpen = raw.keepPaneOpen;
+	if (typeof raw.timeoutSeconds === "number" && Number.isFinite(raw.timeoutSeconds) && raw.timeoutSeconds > 0) {
+		settings.timeoutSeconds = Math.floor(raw.timeoutSeconds);
+	}
+
+	return settings;
+}
+
+function loadExtensionSettings(cwd: string, projectTrusted: boolean): ExtensionSettings {
+	const globalSettings = normalizeSettings(readJsonObject(path.join(getAgentDir(), "settings.json"))?.[SETTINGS_KEY]);
+	if (!projectTrusted) return globalSettings;
+
+	const projectSettings = normalizeSettings(readJsonObject(path.join(cwd, CONFIG_DIR_NAME, "settings.json"))?.[SETTINGS_KEY]);
+	return { ...globalSettings, ...projectSettings };
 }
 
 function tmux(args: string[]): { ok: boolean; stdout: string; stderr: string } {
@@ -869,6 +935,7 @@ async function runOne(
 	task: string,
 	cwd: string,
 	opts: PaneOptions,
+	transport: ResolvedTransport,
 	group: PaneGroup,
 	signal: AbortSignal | undefined,
 	onUpdate: OnResultUpdate | undefined,
@@ -883,7 +950,7 @@ async function runOne(
 		stderr: "",
 		usage: emptyUsage(),
 		model: agent?.model,
-		transport: insideTmux() ? "tmux" : "hidden",
+		transport,
 	};
 
 	if (!agent) {
@@ -893,7 +960,7 @@ async function runOne(
 		return result;
 	}
 
-	if (insideTmux()) await runInPane(result, agent, task, cwd, opts, group, signal, onUpdate);
+	if (transport === "tmux") await runInPane(result, agent, task, cwd, opts, group, signal, onUpdate);
 	else await runHidden(result, agent, task, cwd, signal, onUpdate);
 
 	if (result.exitCode === -1) result.exitCode = 0;
@@ -921,6 +988,12 @@ const LayoutSchema = StringEnum(["h", "v"] as const, {
 	default: "h",
 });
 
+const TransportSchema = StringEnum(["auto", "tmux", "hidden"] as const, {
+	description:
+		'Override tmuxSubagent.defaultTransport for this call: "auto" = tmux when available, "tmux" = tmux when available, "hidden" = headless/no tmux window.',
+	default: DEFAULT_TRANSPORT,
+});
+
 const SubagentParams = Type.Object({
 	agent: Type.Optional(Type.String({ description: "Agent name (single mode)" })),
 	task: Type.Optional(Type.String({ description: "Task to delegate (single mode)" })),
@@ -931,6 +1004,7 @@ const SubagentParams = Type.Object({
 		Type.Boolean({ description: "Prompt before running project-local agents. Default: true.", default: true }),
 	),
 	layout: Type.Optional(LayoutSchema),
+	transport: Type.Optional(TransportSchema),
 	size: Type.Optional(
 		Type.String({
 			description:
@@ -962,12 +1036,13 @@ export default function (pi: ExtensionAPI) {
 		label: "Subagent",
 		description: [
 			"Delegate a task to a specialized subagent that runs in its own pi process with an isolated context window.",
-			"When pi runs inside tmux, subagents open in a NEW dedicated tmux window (a 'tab'), never a split of the active pane, so the user can watch them work live;",
-			"otherwise they run headless. Modes: single (agent + task, its own window) or parallel (tasks array, all panes side-by-side in one shared window).",
+			`Default transport comes from settings.json ${SETTINGS_KEY}.defaultTransport ("auto", "tmux", or "hidden") and can be overridden per call with transport.`,
+			"When transport resolves to tmux inside tmux, subagents open in a NEW dedicated tmux window (a 'tab'), never a split of the active pane; when transport is hidden they run headless.",
+			"Modes: single (agent + task) or parallel (tasks array).",
 			`Default agent scope is "user" (from ${path.join(getAgentDir(), "agents")}).`,
 			`Set agentScope "both" to also load project agents from ${CONFIG_DIR_NAME}/agents.`,
 		].join(" "),
-		promptSnippet: "Delegate a task to a specialized subagent running live in a dedicated tmux window (tab)",
+		promptSnippet: "Delegate a task to a specialized subagent, using settings-controlled tmux/headless transport",
 		promptGuidelines: [
 			"Use subagent to delegate a self-contained task (recon, planning, review, or implementation) to an isolated context window; prefer it for large explorations so the main context stays lean.",
 			"Use subagent parallel mode (tasks array) when several independent investigations can run at once.",
@@ -983,13 +1058,16 @@ export default function (pi: ExtensionAPI) {
 
 			const hasTasks = (params.tasks?.length ?? 0) > 0;
 			const hasSingle = Boolean(params.agent && params.task);
+			const settings = loadExtensionSettings(ctx.cwd, ctx.isProjectTrusted());
+			const transportPreference: TransportPreference = params.transport ?? settings.defaultTransport ?? DEFAULT_TRANSPORT;
+			const transport = resolveTransportPreference(transportPreference);
 
 			const opts: PaneOptions = {
-				layout: params.layout === "v" ? "v" : "h",
+				layout: params.layout ?? settings.layout ?? "h",
 				size: params.size ?? "40%",
-				focus: params.focus ?? false,
-				keepPaneOpen: params.keepPaneOpen ?? true,
-				timeoutSeconds: params.timeoutSeconds ?? DEFAULT_TIMEOUT_S,
+				focus: params.focus ?? settings.focus ?? false,
+				keepPaneOpen: params.keepPaneOpen ?? settings.keepPaneOpen ?? true,
+				timeoutSeconds: params.timeoutSeconds ?? settings.timeoutSeconds ?? DEFAULT_TIMEOUT_S,
 			};
 
 			const makeDetails =
@@ -1061,7 +1139,7 @@ export default function (pi: ExtensionAPI) {
 					messages: [],
 					stderr: "",
 					usage: emptyUsage(),
-					transport: insideTmux() ? "tmux" : "hidden",
+					transport,
 				}));
 
 				const emit = () => {
@@ -1083,7 +1161,7 @@ export default function (pi: ExtensionAPI) {
 				const group = new PaneGroup({ windowName, focus: opts.focus, layout: opts.layout });
 				const settled = await Promise.all(
 					params.tasks.map(async (t, i) => {
-						const r = await runOne(agents, t.agent, t.task, t.cwd ?? ctx.cwd, opts, group, signal, (updated) => {
+						const r = await runOne(agents, t.agent, t.task, t.cwd ?? ctx.cwd, opts, transport, group, signal, (updated) => {
 							results[i] = updated;
 							emit();
 						});
@@ -1126,6 +1204,7 @@ export default function (pi: ExtensionAPI) {
 				params.task as string,
 				params.cwd ?? ctx.cwd,
 				opts,
+				transport,
 				singleGroup,
 				signal,
 				(updated) =>

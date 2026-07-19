@@ -13,7 +13,7 @@
   "packages": [
     "npm:pi-powerline-footer"
   ],
-  "workingVibe": "buffy the vampire slayer",
+  "workingVibe": "firefly tv show",
   "powerline": {
     "preset": "default",
     "cost": {
@@ -35,5 +35,8 @@
     ]
   },
   "showHardwareCursor": true,
-  "hideThinkingBlock": false
+  "hideThinkingBlock": false,
+  "tmuxSubagent": {
+    "defaultTransport": "hidden"
+  }
 }
