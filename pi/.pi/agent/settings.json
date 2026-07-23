@@ -1,8 +1,7 @@
 {
-  "lastChangelogVersion": "0.80.10",
-  "defaultThinkingLevel": "xhigh",
+  "lastChangelogVersion": "0.81.1",
+  "defaultThinkingLevel": "max",
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-4-8",
   "theme": "dark",
   "expertPanel": {
     "provider": "anthropic",
@@ -11,9 +10,14 @@
     "thinking": "max"
   },
   "packages": [
-    "npm:pi-powerline-footer"
+    "npm:pi-powerline-footer",
+    "../../projects/pi-vibe",
+    "npm:pi-subagents"
   ],
-  "workingVibe": "firefly tv show",
+  "piVibe": {
+    "model": "anthropic/claude-haiku-4-5",
+    "genre": "sailor moon"
+  },
   "powerline": {
     "preset": "default",
     "cost": {
@@ -35,8 +39,5 @@
     ]
   },
   "showHardwareCursor": true,
-  "hideThinkingBlock": false,
-  "tmuxSubagent": {
-    "defaultTransport": "hidden"
-  }
+  "hideThinkingBlock": false
 }
