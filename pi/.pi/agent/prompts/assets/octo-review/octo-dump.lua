@@ -2,7 +2,7 @@
 -- so pi (running in the other pane) knows which PR you are looking at and where.
 --
 -- Source once from your nvim config:
---   vim.cmd('luafile ' .. vim.fn.expand('~/.pi/agent/skills/octo-review/scripts/octo-dump.lua'))
+--   vim.cmd('luafile ' .. vim.fn.expand('~/.pi/agent/prompts/assets/octo-review/octo-dump.lua'))
 --
 -- Registers :PiOctoDump and an autocmd that keeps .pi/octo-ctx.json fresh as you
 -- navigate octo buffers. Depends only on octo's stable accessors (buffer.node.number,

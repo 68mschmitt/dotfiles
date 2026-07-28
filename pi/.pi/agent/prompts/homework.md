@@ -1,16 +1,17 @@
 ---
-name: homework
-description: Turn a pi session into homework the user completes away from AI, then run closed-book oral quizzes on it in a later session. Two modes. Generate — use when the user says "give me homework", "homework time", or wants to walk away with learning instead of just delegating. Quiz — use when the user says "quiz me", "quiz me on <file>", or points at a file under ~/projects/second-brain/homework/.
+description: Turn this session into homework you do away from AI, or run a closed-book oral quiz on past homework
+argument-hint: "[quiz <assignment-or-theme-path>]"
 ---
+## Homework
 
-# homework
+Mode selector: **${@:-generate}**
 
-The user delegates work to pi, then learns nothing. This skill fixes that: at session end it produces a homework assignment (human-facing) plus an answer key (agent-facing, never read by the human). Later, a fresh pi session uses the key to run a closed-book oral exam.
+- Empty, or anything that is not `quiz` → **Generate mode**: build homework from the current session.
+- Starts with `quiz` (optionally followed by a path or theme name) → **Quiz mode**: examine the user on existing homework. Everything after `quiz` is the target; if nothing follows, resolve the target as described in Quiz mode step 1.
 
-Two modes. Detect which one applies and follow only that section.
+Follow only the section for the selected mode.
 
-- **Generate mode**: the current session did real work and the user wants homework from it.
-- **Quiz mode**: the user wants to be examined on previously generated homework.
+The problem this solves: the user delegates work to pi and learns nothing. Generate mode produces a homework assignment (human-facing) plus an answer key (agent-facing, never shown to the human). Quiz mode uses that key to run a closed-book oral exam in a later session.
 
 ## File layout
 
@@ -26,11 +27,14 @@ All artifacts live under `~/projects/second-brain/homework/`:
 
 Filenames must start with `assignment` and `key`; the suffix after `--` is context (default: generation date). The assignment file must be fully self-sufficient for doing the homework. The key file holds session context ("why"), the question bank, model answers, and the quiz log. Splitting them is the point: answers never sit in a file the human opens.
 
+Doc templates (read them before writing):
+
+- `~/.pi/agent/prompts/assets/homework/assignment.md`
+- `~/.pi/agent/prompts/assets/homework/key.md`
+
 ## Generate mode
 
-### When
-
-Trigger phrases: "give me homework", "homework time", "make homework from this session", or the user asks to wrap up with something to learn from. If the session has no substantial work yet (nothing built, decided, or debugged), say so in one line and stop.
+If the session has no substantial work yet (nothing built, decided, or debugged), say so in one line and stop.
 
 ### Steps
 
@@ -43,30 +47,26 @@ Trigger phrases: "give me homework", "homework time", "make homework from this s
    Files go in that directory as `assignment--{YYYY-MM-DD}.md` and `key--{YYYY-MM-DD}.md`.
 3. Mine the session for the **delegation gap**: things the agent did, decided, or knew that the user did not do themselves. Those are the teachable items. Ignore things the user did or clearly already knows.
 4. Verify sources. Every concept taught must cite a primary source (official docs, RFC, man page, spec). Use `web_search` to confirm any URL or claim you are not certain of. A source you could not verify gets marked `(unverified)`. Never invent citations — this artifact exists partly to prove the material was not hallucinated.
-5. Write the assignment file from [templates/assignment.md](templates/assignment.md). Rules:
+5. Write the assignment file from the assignment template. Rules:
    - 3–5 assignments, each 10–45 min with a concrete time estimate.
    - Each assignment starts with a verb and is doable away from this session (fresh scratch dir, reading, or a bounded exercise in the repo).
    - Include at least one **rebuild-from-scratch** item (redo a thing the agent did, without looking at the agent's version) and at least one **explain-why** item (write or say the reasoning behind a session decision).
    - The Context section is 2–4 sentences and contains no quiz answers.
-6. Write the key file from [templates/key.md](templates/key.md). Rules:
+6. Write the key file from the key template. Rules:
    - Session compaction is thorough — it is the quiz agent's ONLY context. Record what happened, each decision with its why, rejected alternatives, and every concept exercised.
    - Question bank: 8–12 questions, each tied to an assignment or decision. Mix recall ("what is X"), why ("why X over Y"), and apply ("given Z, what breaks"). Each question carries a model answer, grading notes (what a hit must contain, the common wrong answer), difficulty 1–3, a source, and a follow-up variant for misses.
    - Leave the Quiz log section empty.
-7. Report to the user: the two file paths, the assignment list with time estimates and total time, and the exact quiz command:
+7. Report to the user: the two file paths, the assignment list with time estimates and total time, and the exact quiz invocation:
    ```
-   quiz me on ~/projects/second-brain/homework/{project}/{theme}/assignment--{YYYY-MM-DD}.md
+   /homework quiz ~/projects/second-brain/homework/{project}/{theme}/assignment--{YYYY-MM-DD}.md
    ```
    Tell them not to open the `key--*.md` file — it is the answer key.
 
 ## Quiz mode
 
-### When
-
-Trigger phrases: "quiz me", "quiz me on <path>", "test me on my homework", or any request referencing a file under `~/projects/second-brain/homework/`. If no path was given, list the lesson themes (`ls -dt ~/projects/second-brain/homework/*/*/`), show the most recent 5, and ask which one.
-
 ### Steps
 
-1. Resolve files. Given the assignment file or the theme directory, the key is the `key--*.md` in that same directory (also named in the assignment header). Given the key file directly, use it. If the key file is missing, say so and offer a degraded quiz from the assignment file alone.
+1. Resolve files. Given the assignment file or the theme directory, the key is the `key--*.md` in that same directory (also named in the assignment header). Given the key file directly, use it. If no target was passed, list the lesson themes (`ls -dt ~/projects/second-brain/homework/*/*/`), show the most recent 5, and ask which one. If the key file is missing, say so and offer a degraded quiz from the assignment file alone.
 2. Read the key file silently. Do not quote, summarize, or display its contents. Remind the user once: closed book, no peeking at notes or the read output.
 3. Run the exam by the **Quiz agent protocol** embedded in the key file. Summary of that protocol (the file's version wins if they differ):
    - One question at a time. Wait for the answer.

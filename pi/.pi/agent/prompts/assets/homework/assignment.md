@@ -2,7 +2,7 @@
 
 - Generated: {YYYY-MM-DD} from a pi session in `{project}`
 - Total time: ~{sum} min
-- Quiz: start a NEW pi session and say: `quiz me on {absolute path to this file}`
+- Quiz: start a NEW pi session and run: `/homework quiz {absolute path to this file}`
 - Answer key (do NOT open it): `{absolute path to the key--*.md file in this directory}`
 
 <!-- AGENT INSTRUCTIONS

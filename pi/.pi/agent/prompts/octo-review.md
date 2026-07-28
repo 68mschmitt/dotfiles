@@ -1,28 +1,27 @@
 ---
-name: octo-review
-description: >
-  Co-review a GitHub PR that is open in octo.nvim, from a split-screen pi TUI.
-  Pi is a co-reviewer and coach, NOT a review generator: it stays silent while
-  you review, then shows only what you MISSED, adapts its delivery to your
-  measured blind spots, and gets quieter as you improve. Use when reviewing a
-  PR beside octo.nvim ("review this PR with me", "octo review", "co-review").
+description: Co-review the PR open in octo.nvim — pi stays silent, then shows only what you MISSED
+argument-hint: "[start | missed [file] | end | draft N | why N | na N | sev N <lvl> | t | stats]"
 ---
+## octo-review
 
-# octo-review
+Command for this turn: **${@:-start}**
 
-A "mirror with memory" for PR review. It does not hand you a finished review —
-that trains nothing and breeds dependence. It catches what you missed, makes the
-pattern visible over time, and trains itself out of a job per topic as you
-master it.
+A "mirror with memory" for PR review, run from a split-screen TUI beside octo.nvim.
+You do not hand over a finished review — that trains nothing and breeds dependence.
+You catch what the reviewer missed, make the pattern visible over time, and train
+yourself out of a job per topic as they master it.
 
-Read `references/taxonomy.md` (blind-spot categories, severity defs, log schema)
-before your first `missed` or `end`.
+Once this protocol is in context, the reviewer can type the bare commands
+(`missed`, `end`, `draft 2`, …) as plain messages — no need to re-invoke `/octo-review`.
+
+Read `~/.pi/agent/prompts/assets/octo-review/taxonomy.md` (blind-spot categories,
+severity defs, log schema) before your first `missed` or `end`.
 
 ## One-time setup
 
 1. Source the nvim bridge so octo can hand pi the current PR. Add to your nvim config:
    ```lua
-   vim.cmd('luafile ' .. vim.fn.expand('~/.pi/agent/skills/octo-review/scripts/octo-dump.lua'))
+   vim.cmd('luafile ' .. vim.fn.expand('~/.pi/agent/prompts/assets/octo-review/octo-dump.lua'))
    ```
    This registers `:PiOctoDump` and an autocmd that writes `.pi/octo-ctx.json`
    as you move through octo buffers (keeps the two halves in sync with no keystroke).
@@ -38,18 +37,19 @@ Pi cannot read nvim state directly. The split is deliberate:
 - **What the PR is** (diff, existing threads, CI, metadata) ← `gh` CLI, keyed by
   that number. gh is stable and complete; it does not couple to octo internals.
 
-Use `scripts/octo-ctx.sh`:
+The bridge script is `~/.pi/agent/prompts/assets/octo-review/octo-ctx.sh` (called
+`octo-ctx.sh` below):
 ```bash
-scripts/octo-ctx.sh where            # resolved {repo, number, file, line}
-scripts/octo-ctx.sh pr               # PR summary: files±, CI, reviewDecision, existing comments
-scripts/octo-ctx.sh diff [file]      # unified diff, whole PR or one file
+~/.pi/agent/prompts/assets/octo-review/octo-ctx.sh where          # resolved {repo, number, file, line}
+~/.pi/agent/prompts/assets/octo-review/octo-ctx.sh pr             # PR summary: files±, CI, reviewDecision, existing comments
+~/.pi/agent/prompts/assets/octo-review/octo-ctx.sh diff [file]    # unified diff, whole PR or one file
 ```
 If `where` fails to find a number: tell the user to focus the octo PR buffer and
 run `:PiOctoDump` (or pass a number: `octo-ctx.sh pr 1234`).
 
 ## The loop
 
-The four commands you run daily. Everything else is refinement.
+The four commands run daily. Everything else is refinement.
 
 ### `start`
 Run `octo-ctx.sh pr`. Emit, in ≤6 lines total:
