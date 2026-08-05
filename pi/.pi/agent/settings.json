@@ -1,6 +1,6 @@
 {
   "lastChangelogVersion": "0.83.0",
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "high",
   "defaultProvider": "anthropic",
   "theme": "dark",
   "expertPanel": {
