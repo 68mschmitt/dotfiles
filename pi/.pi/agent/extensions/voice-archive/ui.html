@@ -1,0 +1,1279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Voice Notes</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #16191f;
+    --panel-2: #1c2027;
+    --line: #262b33;
+    --fg: #dfe3ea;
+    --dim: #8b93a1;
+    --accent: #7aa2f7;
+    --voice: #9ece6a;
+    --user: #e0af68;
+    --radius: 10px;
+    font-synthesis: none;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 14px/1.55 ui-sans-serif, -apple-system, "SF Pro Text", system-ui, sans-serif;
+    display: grid; grid-template-columns: 340px 1fr; overflow: hidden;
+  }
+
+  /* ── Sidebar ───────────────────────────────────────────── */
+  aside { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
+  .brand { padding: 14px 16px 10px; display: flex; align-items: center; gap: 8px; }
+  .brand h1 { font-size: 14px; margin: 0; letter-spacing: .3px; }
+  .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: none; }
+  .brand .dot.on { background: var(--voice); box-shadow: 0 0 8px var(--voice); }
+  .controls { padding: 0 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+  input[type=search] {
+    width: 100%; padding: 7px 10px; border-radius: 8px; color: var(--fg);
+    background: var(--panel-2); border: 1px solid var(--line); font: inherit; font-size: 13px;
+  }
+  input[type=search]:focus { outline: none; border-color: var(--accent); }
+  .toggle { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--dim); cursor: pointer; user-select: none; }
+  .ctlrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .ctlrow .spacer { flex: 1; }
+  .tiny { padding: 2px 7px; font-size: 10.5px; }
+  .list { overflow-y: auto; flex: 1; padding: 4px 8px 16px; min-height: 0; }
+  .sess {
+    padding: 9px 10px; border-radius: var(--radius); cursor: pointer;
+    border: 1px solid transparent; margin-bottom: 3px;
+  }
+  .sess:hover { background: var(--panel-2); }
+  .sess.active { background: var(--panel-2); border-color: var(--accent); }
+  /* Keyboard parity with the mouse: 236 rows must be reachable by Tab + Enter. */
+  .sess:focus-visible, .grph:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .sess.flash { animation: rowflash 1.2s ease-out; }
+  @keyframes rowflash {
+    0% { background: rgba(122,162,247,.30); }
+    100% { background: transparent; }
+  }
+  .sess .t { font-size: 12.5px; margin-bottom: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .sess .m { font-size: 11px; color: var(--dim); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pill { background: rgba(158,206,106,.14); color: var(--voice); padding: 0 5px; border-radius: 5px; font-size: 10.5px; }
+  .cwd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; opacity: .75; }
+
+  /* ── Sidebar grouping / renaming / categories (§3) ─────── */
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .grp { margin-bottom: 4px; }
+  .grph {
+    display: flex; align-items: center; gap: 6px; width: 100%; margin: 6px 0 2px;
+    background: none; border: none; border-radius: 6px; padding: 3px 6px;
+    color: var(--dim); font-size: 11px; text-align: left;
+  }
+  .grph:hover { background: var(--panel-2); color: var(--fg); border-color: transparent; }
+  .grph .caret { flex: none; width: 9px; }
+  /* Directory grouping is the primary structure (§3), so the header must outrank
+     its rows rather than being dimmer and smaller than them. */
+  .grph .gl {
+    flex: 1; min-width: 0; overflow: hidden; white-space: nowrap;
+    direction: rtl; text-align: left; text-overflow: ellipsis;
+    font-size: 12px; color: var(--fg); font-weight: 600;
+  }
+  .grph .gl bdi { direction: ltr; unicode-bidi: isolate; }
+  .grph .gc { flex: none; font-variant-numeric: tabular-nums; opacity: .7; }
+  /* Row controls stay out of the way until the row is hovered or open — but must
+     also appear when focus lands inside them, or Tab reaches an invisible button. */
+  .sess .ctl { display: flex; align-items: center; gap: 6px; margin-top: 6px; opacity: 0; transition: opacity .12s; }
+  .sess:hover .ctl, .sess.active .ctl, .sess:focus-within .ctl, .sess:focus-visible .ctl { opacity: 1; }
+  .sess .ctl button { padding: 1px 6px; font-size: 10.5px; }
+  select.mini {
+    background: var(--panel-2); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 6px; font: inherit; font-size: 10.5px; padding: 1px 4px; max-width: 150px;
+  }
+  select.mini:focus { outline: none; border-color: var(--accent); }
+  input.rename {
+    width: 100%; padding: 3px 6px; border-radius: 6px; color: var(--fg);
+    background: var(--bg); border: 1px solid var(--accent); font: inherit; font-size: 12.5px;
+  }
+  input.rename:focus { outline: none; }
+  /* Renaming is UI-only; say so while editing instead of hiding it in a hover title. */
+  .renamehint { font-size: 10px; color: var(--accent); margin-top: 3px; }
+  .subtitle { font-size: 10.5px; color: var(--dim); opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .catchip { padding: 0 5px; border-radius: 5px; font-size: 10.5px; background: var(--panel-2); }
+  .catdot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+
+  /* ── Live processing status (§1) ────────────────────────── */
+  .stat { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; letter-spacing: .2px; }
+  .stat .sdot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+  .stat.big { font-size: 12px; }
+  .stat.big .sdot { width: 9px; height: 9px; }
+  .stat.p-idle { color: var(--dim); }
+  .stat.p-summarizing { color: #bb9af7; }
+  .stat.p-speaking { color: var(--voice); }
+  .stat.p-archiving { color: var(--accent); }
+  /* Stalled must not rely on colour alone, and #5c636e on #16191f fails AA at 10.5px. */
+  .stat.stalled { color: #c8a45c; }
+  .stat.recent { color: var(--dim); }
+  .stat .meta { color: inherit; opacity: .75; }
+  .statoff { font-size: 10.5px; color: var(--user); }
+  /* Only work-in-flight pulses. `idle` is a steady dot: it just means the session is open. */
+  .stat:not(.p-idle):not(.stalled) .sdot { animation: statpulse 1.1s ease-in-out infinite; }
+  @keyframes statpulse {
+    0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 6px currentColor; }
+    50% { transform: scale(1.5); opacity: .4; box-shadow: 0 0 0 currentColor; }
+  }
+
+  /* ── Main ──────────────────────────────────────────────── */
+  main { overflow-y: auto; min-height: 0; padding: 0 0 80px; scroll-behavior: smooth; }
+  .head {
+    position: sticky; top: 0; z-index: 5; padding: 14px 22px 12px;
+    background: rgba(15,17,21,.93); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+  }
+  /* Clamp: a long renamed session must not permanently eat the sticky header. */
+  .head h2 {
+    margin: 0 0 5px; font-size: 15px; font-weight: 600;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .head .m { font-size: 11.5px; color: var(--dim); display: flex; gap: 10px; flex-wrap: wrap; }
+  .body { padding: 18px 22px; max-width: 900px; }
+
+  /* ── Auto-queue switch (§4) ────────────────────────────── */
+  .aq { display: flex; align-items: baseline; gap: 9px; margin-top: 8px; flex-wrap: wrap; }
+  .aq .note { font-size: 11px; color: var(--dim); max-width: 620px; }
+  .aq .note.caution { color: var(--user); }
+
+  .item { display: grid; grid-template-columns: 62px 1fr; gap: 12px; margin-bottom: 16px; }
+  .gutter { font-size: 10.5px; color: var(--dim); text-align: right; padding-top: 3px; font-variant-numeric: tabular-nums; }
+  .who { font-size: 10.5px; text-transform: uppercase; letter-spacing: .7px; margin-bottom: 4px; }
+  .who.user { color: var(--user); }
+  .who.assistant { color: var(--accent); }
+  .who.voice { color: var(--voice); }
+  .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .assistant .text, .user .text { color: #cfd6e2; }
+
+  .card {
+    background: linear-gradient(180deg, rgba(158,206,106,.08), rgba(158,206,106,.03));
+    border: 1px solid rgba(158,206,106,.28); border-radius: var(--radius); padding: 11px 13px;
+  }
+  .card .text { font-size: 14.5px; }
+  .row { display: flex; align-items: center; gap: 10px; margin-top: 9px; flex-wrap: wrap; }
+  audio { height: 30px; max-width: 320px; }
+  audio::-webkit-media-controls-panel { background: var(--panel-2); }
+  .meta { font-size: 11px; color: var(--dim); }
+  .warn { font-size: 11.5px; color: #e0af68; }
+
+  /* ── Voice note ↔ source response grouping (§2) ─────────── */
+  .vnote + .vnote { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(158,206,106,.18); }
+  details.src { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  details.src > summary { cursor: pointer; user-select: none; list-style: none; font-size: 11.5px; color: var(--dim); }
+  details.src > summary:hover { color: var(--fg); }
+  details.src > summary::-webkit-details-marker { display: none; }
+  details.src > summary::before { content: "▸ "; }
+  details.src[open] > summary::before { content: "▾ "; }
+  details.src .srcbody { margin-top: 8px; }
+  details.src .text { font-size: 13px; color: #cfd6e2; }
+
+  button {
+    background: var(--panel-2); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 7px; padding: 4px 9px; font: inherit; font-size: 11.5px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .45; cursor: default; }
+
+  .tools { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+  .tool {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+    color: var(--dim); background: var(--panel); border-left: 2px solid var(--line);
+    padding: 2px 8px; border-radius: 0 5px 5px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .empty { color: var(--dim); padding: 60px 22px; text-align: center; }
+  .empty button { margin-top: 10px; }
+  .sidenote { color: var(--dim); padding: 26px 10px; text-align: center; font-size: 12px; line-height: 1.7; }
+  .sidenote button { margin-top: 8px; }
+  .jump {
+    position: fixed; right: 22px; bottom: 22px; display: flex; gap: 8px;
+    background: rgba(22,25,31,.95); border: 1px solid var(--line); border-radius: 999px; padding: 6px 8px;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 30;
+    background: #241d17; border: 1px solid var(--user); color: var(--user);
+    padding: 6px 12px; border-radius: 8px; font-size: 12px; max-width: 60vw;
+  }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: #2b313b; border-radius: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <span class="dot" id="ttsDot" title="TTS server status"></span>
+    <h1>Voice Notes</h1>
+  </div>
+  <div class="controls">
+    <input type="search" id="q" placeholder="Filter sessions…" autocomplete="off" />
+    <label class="toggle"><input type="checkbox" id="onlyVoice" checked /> only sessions with voice notes</label>
+    <div class="ctlrow">
+      <label class="toggle">group
+        <select class="mini" id="groupMode">
+          <option value="dir">by directory</option>
+          <option value="cat">by category</option>
+        </select>
+      </label>
+      <span class="spacer"></span>
+      <button class="tiny" id="newCat" title="Create a category you can file sessions into">+ category</button>
+      <button class="tiny" id="mgrCat" title="Rename, recolour or delete categories">manage</button>
+    </div>
+    <div class="ctlrow">
+      <button class="tiny" id="expandAll" title="Expand every group">expand all</button>
+      <button class="tiny" id="collapseAll" title="Collapse every group">collapse all</button>
+      <span class="spacer"></span>
+      <span class="subtitle" id="sessCount"></span>
+    </div>
+    <div id="statusOff"></div>
+  </div>
+  <div class="list" id="sessions"></div>
+</aside>
+
+<main>
+  <div id="main"><div class="empty">Select a session.</div></div>
+</main>
+
+<div class="jump" id="jump" hidden>
+  <button id="prevVoice" title="Previous voice note (k)">↑ voice</button>
+  <button id="nextVoice" title="Next voice note (j)">↓ voice</button>
+  <button id="playAll" title="Play every voice note in order">▶ play all</button>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let sessions = [];
+let current = null;
+let voiceEls = [];
+let cursor = -1;
+
+// UI-only metadata (/api/meta): categories + per-session name/category/autoQueue.
+let uiMeta = { v: 1, categories: [], sessions: {} };
+// Latest /api/status payload, keyed by session id. Never triggers a timeline render.
+let statusMap = {};
+// "none" | "final" | "every" — how much the user's global voice config already voices.
+let voiceCoverage = "final";
+// Source-response disclosures the user has expanded, by source entry id, for the open session.
+let openGroups = new Set();
+// Session id whose sidebar row is being renamed inline; suppresses background re-renders.
+let renaming = null;
+let toastTimer = null;
+// Timeline filter: show every message, or only the voice notes (which are the point).
+let notesOnly = false;
+// Consecutive /api/status failures. A dead feed must stop claiming sessions are live.
+let statusFails = 0;
+// Last non-idle phase seen per session, so a sub-second phase still leaves a trace.
+const lastSeen = new Map();
+// Signature of what each [data-stat] span currently shows, so an unchanged status is
+// not rewritten every second (which would restart the pulse animation forever).
+const statSig = new Map();
+// True while play-all is walking the timeline; lets it be stopped and blocks re-renders.
+let playingAll = false;
+// A timeline refresh held back because audio was playing; applied once it stops.
+let pendingTimeline = null;
+
+const fmtTime = (ts) => {
+  const d = new Date(ts);
+  return isNaN(d) ? "" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+};
+const fmtDate = (ts) => {
+  const d = new Date(ts);
+  return isNaN(d) ? "" : d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+};
+const fmtDur = (ms) => (ms == null ? "" : `${(ms / 1000).toFixed(1)}s`);
+const fmtSize = (b) => (b == null ? "" : b < 1024 ? `${b} B` : `${(b / 1024).toFixed(0)} KB`);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// ── Pure view logic (no DOM; unit-tested from node) ────────
+
+const shortPath = (p) => String(p ?? "").replace(/^\/Users\/[^/]+/, "~");
+// Deep paths differ in their TAIL, so a leading ellipsis keeps the distinguishing part.
+// The full path always stays in the title attribute.
+const tailPath = (p, segs = 2) => {
+  const short = shortPath(p);
+  const parts = short.split("/").filter(Boolean);
+  if (short === "~" || parts.length <= segs) return short || "(no directory)";
+  return `…/${parts.slice(-segs).join("/")}`;
+};
+const wordCount = (s) => (String(s ?? "").match(/\S+/g) || []).length;
+// The override wins over the transcript-derived title everywhere the session is named.
+const displayNameOf = (s) => (s && s.name && s.name.trim()) || (s && s.title) || "(untitled)";
+// Category colours land in a style attribute, and the server stores whatever was POSTed,
+// so only accept literal colours here — esc() stops quote-breaking but not `red;background:url(…)`.
+const safeColor = (c) => (/^#[0-9a-fA-F]{3,8}$/.test(String(c ?? "").trim()) ? String(c).trim() : null);
+
+const PHASES = ["idle", "summarizing", "speaking", "archiving"];
+// `idle` is worth showing: it is how the user tells which sessions are open at all.
+const PHASE_LABEL = { idle: "open", summarizing: "summarizing", speaking: "speaking", archiving: "archiving" };
+// Past-tense trace shown briefly after a phase ends, so work that finished between two
+// polls still leaves evidence instead of blinking once and vanishing.
+const PHASE_PAST = { summarizing: "summarized", speaking: "spoke", archiving: "archived" };
+const LATCH_MS = 6000;
+
+/**
+ * Presentation of one session's status.
+ *
+ * `recent` is the latch: the poll samples once a second, but a summarize/speak/archive
+ * step can easily start and finish inside that second. Without a decaying trace the
+ * user just sees a random blink, so an idle session that was doing something moments
+ * ago reads "archived · 3s ago" before settling back to plain "open".
+ */
+function phaseInfo(st, recent, now = Date.now()) {
+  if (!st) return null;
+  const phase = PHASES.includes(st.phase) ? st.phase : "idle";
+  const stalled = !!st.stalled;
+  const detail = st.detail ? String(st.detail) : "";
+  const queueDepth = Number(st.queueDepth) || 0;
+
+  let label = PHASE_LABEL[phase];
+  let cls = `stat p-${phase}${stalled ? " stalled" : ""}`;
+  if (stalled) label = `stalled: ${phase}`;
+
+  if (!stalled && phase === "idle" && recent && PHASE_PAST[recent.phase]) {
+    const age = now - recent.at;
+    if (age >= 0 && age < LATCH_MS) {
+      label = `${PHASE_PAST[recent.phase]} · ${Math.max(1, Math.round(age / 1000))}s ago`;
+      cls = "stat recent";
+    }
+  }
+
+  const title = stalled
+    ? `stuck in "${phase}" — the pi process (pid ${st.pid}) is still alive but has reported no progress since ${fmtTime(st.updatedAt)}, so it looks wedged`
+    : [`${phase}${detail ? ` — ${detail}` : ""}`, `pid ${st.pid}`, `updated ${fmtTime(st.updatedAt)}`].join(" · ");
+  return { phase, stalled, detail, queueDepth, label, cls, title };
+}
+
+// What the timeline currently shows, cheaply. The audio sidecar lands ~1s AFTER the
+// session entry without changing the item count, so comparing lengths alone leaves the
+// newest note stuck on "no audio archived" until the user switches sessions.
+const timelineSig = (items) =>
+  (items || []).map((i) => `${i.id}|${i.noteId ?? ""}|${i.audio ?? ""}|${i.error ?? ""}|${i.durationMs ?? ""}`).join("~");
+
+// Bucket sessions for the sidebar. `mode` is "dir" (default) or "cat".
+function groupSessions(list, mode, categories) {
+  const byId = new Map((categories || []).map((c) => [c.id, c]));
+  const map = new Map();
+  for (const s of list) {
+    let key, label, full = "", color = null, mono = false;
+    if (mode === "cat") {
+      const c = s.categoryId ? byId.get(s.categoryId) : null;
+      key = c ? `cat:${c.id}` : "cat:none";
+      label = c ? c.name : "Uncategorized";
+      full = label;
+      color = c ? c.color : null;
+    } else {
+      key = `dir:${s.cwd ?? ""}`;
+      // Ellipsize the HEAD: deep paths differ in their tail, and the full path
+      // stays in the header's title attribute.
+      label = tailPath(s.cwd);
+      full = shortPath(s.cwd) || "(no directory)";
+      mono = true;
+    }
+    let g = map.get(key);
+    if (!g) map.set(key, (g = { key, label, full: full || label, color, mono, sessions: [], last: 0 }));
+    g.sessions.push(s);
+    g.last = Math.max(g.last, s.mtimeMs || Date.parse(s.updatedAt) || 0);
+  }
+  // Most-recently-active group first; "Uncategorized" is a leftovers bin, so it sinks.
+  return [...map.values()].sort((a, b) => {
+    if (a.key === "cat:none") return 1;
+    if (b.key === "cat:none") return -1;
+    return b.last - a.last;
+  });
+}
+
+// Fold the flat chronological timeline into render nodes, pairing each voice note with the
+// assistant message it summarizes. Returns {type:"item"} and {type:"group"} nodes in order.
+// A grouped assistant message is emitted only inside its group — never standalone as well.
+function pairTimeline(items) {
+  const assistants = new Map();
+  for (const it of items) if (it.kind === "assistant") assistants.set(it.id, it);
+
+  const notesBySource = new Map();
+  for (const it of items) {
+    if (it.kind !== "voice") continue;
+    const sid = it.sourceEntryId;
+    if (!sid || !assistants.has(sid)) continue;
+    if (!notesBySource.has(sid)) notesBySource.set(sid, []);
+    notesBySource.get(sid).push(it);
+  }
+
+  const out = [];
+  const done = new Set();
+  for (const it of items) {
+    if (it.kind === "assistant" && notesBySource.has(it.id)) continue;
+    if (it.kind === "voice") {
+      const sid = it.sourceEntryId;
+      if (sid && notesBySource.has(sid)) {
+        // Several notes can share one source; they stack into the single group, placed at
+        // the first note's position so the timeline stays chronological.
+        if (done.has(sid)) continue;
+        done.add(sid);
+        out.push({ type: "group", key: sid, source: assistants.get(sid), notes: notesBySource.get(sid) });
+        continue;
+      }
+    }
+    out.push({ type: "item", item: it });
+  }
+  return out;
+}
+
+// Honest description of what auto-queue will actually do, given the global voice config.
+function autoQueueNote(coverage) {
+  if (coverage === "every") {
+    return {
+      caution: true,
+      text: "every response is already voiced by your global voice config — this adds nothing right now",
+    };
+  }
+  if (coverage === "none") {
+    return {
+      caution: false,
+      text: "nothing is voiced automatically right now, so auto-queue does all the work for this session",
+    };
+  }
+  return {
+    caution: false,
+    text: "only the final response of each run is voiced today — auto-queue fills in the earlier ones",
+  };
+}
+
+// ── Persisted sidebar preferences ──────────────────────────
+
+const LS_GROUP = "va.groupMode";
+const LS_COLLAPSED = "va.collapsedGroups";
+
+const groupMode = () => (localStorage.getItem(LS_GROUP) === "cat" ? "cat" : "dir");
+
+let collapsed = new Set();
+// One-shot: seed the default collapse on first render, once groups are known.
+let collapsedInit = false;
+try { collapsed = new Set(JSON.parse(localStorage.getItem(LS_COLLAPSED) || "[]")); } catch { /* corrupt ⇒ all open */ }
+const saveCollapsed = () => { try { localStorage.setItem(LS_COLLAPSED, JSON.stringify([...collapsed])); } catch { /* private mode */ } };
+
+function toast(msg) {
+  let el = $("toast");
+  if (!el) { el = document.createElement("div"); el.id = "toast"; el.className = "toast"; document.body.append(el); }
+  el.textContent = msg;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.remove(), 4000);
+}
+
+// ── Sidebar ────────────────────────────────────────────────
+
+async function loadMeta() {
+  try {
+    const res = await fetch("/api/meta");
+    if (res.ok) uiMeta = await res.json();
+  } catch { /* keep whatever we had */ }
+}
+
+async function loadSessions() {
+  try {
+    const res = await fetch(`/api/sessions${$("onlyVoice").checked ? "?voice=1" : ""}`);
+    if (!res.ok) throw new Error(`server returned ${res.status}`);
+    sessions = await res.json();
+    renderSessions();
+  } catch (err) {
+    // Without this the page sits on "Select a session." forever with no clue.
+    $("sessions").innerHTML =
+      `<div class="sidenote">Could not load sessions.<br><span class="subtitle">${esc(err.message)}</span><br>`
+      + `<button class="tiny" id="retry">retry</button></div>`;
+    const r = $("retry");
+    if (r) r.onclick = () => loadSessions();
+  }
+}
+
+function renderSessions() {
+  const box = $("sessions");
+  // Never yank the DOM out from under an open <select> or a focused control.
+  if (box.contains(document.activeElement) && document.activeElement !== box) return;
+
+  const scroll = box.scrollTop;
+  const q = $("q").value.toLowerCase().trim();
+  const shown = q
+    ? sessions.filter((s) => `${displayNameOf(s)} ${s.title} ${s.cwd}`.toLowerCase().includes(q))
+    : sessions;
+
+  const count = $("sessCount");
+  if (count) {
+    count.textContent = shown.length === sessions.length
+      ? `${sessions.length} sessions`
+      : `${shown.length} of ${sessions.length}`;
+  }
+
+  if (!shown.length) {
+    box.innerHTML = emptySidebarHTML(q);
+    wireEmptySidebar();
+    return;
+  }
+
+  // Category mode with no categories is otherwise one "Uncategorized" bucket holding
+  // every session, with no hint that categories are a thing you can make.
+  if (groupMode() === "cat" && !(uiMeta.categories || []).length) {
+    box.innerHTML = `<div class="sidenote">No categories yet.<br>`
+      + `<span class="subtitle">Group these ${shown.length} sessions however you like.</span><br>`
+      + `<button class="tiny" id="firstCat">+ create a category</button></div>`;
+    const f = $("firstCat");
+    if (f) f.onclick = async () => { if (await createCategory()) renderSessions(); };
+    return;
+  }
+
+  const groups = groupSessions(shown, groupMode(), uiMeta.categories);
+  // First visit with 32 directories should not be a 236-row flat scroll: collapse all
+  // but the most recently active group, then remember whatever the user does after.
+  if (!collapsedInit) {
+    collapsedInit = true;
+    if (!localStorage.getItem(LS_COLLAPSED)) {
+      for (const g of groups.slice(1)) collapsed.add(g.key);
+      saveCollapsed();
+    }
+  }
+
+  box.innerHTML = groups.map((g) => groupHTML(g, !!q)).join("");
+  wireSidebar();
+  applyStatus();
+  box.scrollTop = scroll;
+}
+
+// One message per situation, each with a one-click way out. A single "No sessions."
+// cannot distinguish "nothing matched" from "the voice-notes filter hid everything".
+function emptySidebarHTML(q) {
+  if (q) {
+    return `<div class="sidenote">Nothing matches “${esc(q)}”.<br>`
+      + `<button class="tiny" id="clearQ">clear filter</button></div>`;
+  }
+  if ($("onlyVoice").checked) {
+    return `<div class="sidenote">No sessions have voice notes yet.<br>`
+      + `<span class="subtitle">Notes appear once your agent speaks.</span><br>`
+      + `<button class="tiny" id="showAll">show all sessions</button></div>`;
+  }
+  return `<div class="sidenote">No sessions recorded yet.</div>`;
+}
+
+function wireEmptySidebar() {
+  const c = $("clearQ");
+  if (c) c.onclick = () => { $("q").value = ""; renderSessions(); };
+  const a = $("showAll");
+  if (a) a.onclick = () => { $("onlyVoice").checked = false; loadSessions(); };
+}
+
+// `forceOpen` is set while a filter is active: honouring the collapsed set then would
+// render headers with nonzero counts and zero visible rows, which reads as a broken filter.
+function groupHTML(g, forceOpen) {
+  const open = forceOpen || !collapsed.has(g.key);
+  const color = safeColor(g.color);
+  return `
+    <div class="grp">
+      <button class="grph" data-grp="${esc(g.key)}" aria-expanded="${open}" title="${esc(g.full)}">
+        <span class="caret">${open ? "▾" : "▸"}</span>
+        ${color ? `<span class="catdot" style="background:${esc(color)}"></span>` : ""}
+        <span class="gl${g.mono ? " mono" : ""}"><bdi>${esc(g.label)}</bdi></span>
+        <span class="gc">${g.sessions.length}</span>
+      </button>
+      ${open ? g.sessions.map(sessHTML).join("") : ""}
+    </div>`;
+}
+
+function sessHTML(s) {
+  const overridden = !!(s.name && s.name.trim());
+  const cat = (uiMeta.categories || []).find((c) => c.id === s.categoryId) || null;
+  const catColor = cat ? safeColor(cat.color) : null;
+  return `
+    <div class="sess ${s.id === current?.meta.id ? "active" : ""}" data-id="${esc(s.id)}"
+         role="button" tabindex="0" aria-label="Open session: ${esc(displayNameOf(s))}"
+         title="${esc(overridden ? s.title : "")}">
+      <div class="t" data-title="1">${esc(displayNameOf(s))}</div>
+      ${overridden ? `<div class="subtitle">${esc(s.title)}</div>` : ""}
+      <div class="m">
+        <span>${fmtDate(s.updatedAt)}</span>
+        ${s.voiceNotes ? `<span class="pill">♪ ${s.voiceNotes}</span>` : ""}
+        <span>${s.messages} msg</span>
+        <span data-stat="${esc(s.id)}"></span>
+      </div>
+      <div class="m">
+        <span class="cwd" title="${esc(shortPath(s.cwd))}">${esc(tailPath(s.cwd, 2))}</span>
+        ${cat ? `<span class="catchip"${catColor ? ` style="color:${esc(catColor)}"` : ""}>${esc(cat.name)}</span>` : ""}
+      </div>
+      <div class="ctl">
+        <button data-rename="${esc(s.id)}" title="Rename in this UI only — the session file is never touched">✎ rename</button>
+        <select class="mini" data-cat="${esc(s.id)}" title="Category">${catOptionsHTML(s.categoryId)}</select>
+      </div>
+    </div>`;
+}
+
+function catOptionsHTML(selected) {
+  const opts = [`<option value=""${!selected ? " selected" : ""}>Uncategorized</option>`];
+  for (const c of uiMeta.categories || []) {
+    opts.push(`<option value="${esc(c.id)}"${c.id === selected ? " selected" : ""}>${esc(c.name)}</option>`);
+  }
+  opts.push(`<option value="__new">New category…</option>`);
+  return opts.join("");
+}
+
+function wireSidebar() {
+  for (const el of document.querySelectorAll(".sess")) {
+    const activate = () => openSession(el.dataset.id);
+    el.onclick = (e) => { if (!e.target.closest(".ctl") && !e.target.closest("input.rename")) activate(); };
+    // A div with an onclick is mouse-only; 236 rows need Enter/Space too.
+    el.onkeydown = (e) => {
+      if (e.target !== el) return; // let the rename input and category select keep their keys
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(); }
+    };
+  }
+  for (const b of document.querySelectorAll("[data-grp]")) {
+    b.onclick = () => {
+      const key = b.dataset.grp;
+      if (collapsed.has(key)) collapsed.delete(key); else collapsed.add(key);
+      saveCollapsed();
+      renderSessions();
+    };
+  }
+  for (const b of document.querySelectorAll("[data-rename]")) {
+    b.onclick = (e) => { e.stopPropagation(); startRename(b.dataset.rename); };
+  }
+  for (const sel of document.querySelectorAll("[data-cat]")) {
+    sel.onclick = (e) => e.stopPropagation();
+    sel.onchange = (e) => { e.stopPropagation(); pickCategory(sel.dataset.cat, sel.value); };
+  }
+}
+
+const rowFor = (id) => [...document.querySelectorAll(".sess")].find((el) => el.dataset.id === id);
+
+// ── Renaming + categorizing (§3) ───────────────────────────
+
+function startRename(id) {
+  const row = rowFor(id);
+  const s = sessions.find((x) => x.id === id);
+  if (!row || !s) return;
+  const slot = row.querySelector("[data-title]");
+  if (!slot || slot.dataset.editing) return;
+
+  renaming = id;
+  const input = document.createElement("input");
+  input.className = "rename";
+  input.value = s.name || "";
+  input.placeholder = s.title || "";
+  input.setAttribute("aria-label", "Session display name (this UI only)");
+  // Renaming being UI-only is the whole point of the feature, so state it in view
+  // rather than in a title attribute on a hover-only button.
+  const hint = document.createElement("div");
+  hint.className = "renamehint";
+  hint.textContent = "display name in this UI only · enter saves · esc cancels";
+
+  let settled = false;
+  const finish = (commit) => {
+    if (settled || renaming !== id) return;
+    settled = true;
+    renaming = null;
+    hint.remove();
+    // Blur commits: clicking away used to silently discard the typing.
+    // An empty value clears the override and falls back to the derived title.
+    if (commit) patchSessionMeta(id, { name: input.value.trim() });
+    else renderSessions();
+  };
+  input.onkeydown = (e) => {
+    e.stopPropagation();
+    if (e.key === "Enter") { e.preventDefault(); finish(true); }
+    else if (e.key === "Escape") { e.preventDefault(); finish(false); }
+  };
+  input.onblur = () => finish(true);
+  slot.dataset.editing = "1";
+  slot.replaceChildren(input);
+  slot.after(hint);
+  input.focus();
+  input.select();
+}
+
+async function pickCategory(id, value) {
+  if (value !== "__new") {
+    const cat = (uiMeta.categories || []).find((c) => c.id === value);
+    await patchSessionMeta(id, { categoryId: value || null });
+    // In category mode the row just moved to another (possibly collapsed) group, so
+    // without this the user's last action looks like it deleted the session.
+    revealSession(id, cat ? `Filed under “${cat.name}”` : "Moved to Uncategorized");
+    return;
+  }
+  const cat = await createCategory();
+  if (!cat) { renderSessions(); return; }
+  await patchSessionMeta(id, { categoryId: cat.id });
+  revealSession(id, `Filed under “${cat.name}”`);
+}
+
+// Shared by the row select and the persistent "+ category" button.
+async function createCategory(presetName) {
+  const name = presetName ?? prompt("New category name:");
+  if (name == null || !name.trim()) return null;
+  try {
+    const res = await fetch("/api/categories", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), color: nextCategoryColor() }),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? res.statusText);
+    const cat = await res.json();
+    await loadMeta();
+    return cat;
+  } catch (err) {
+    toast(`could not create category: ${err.message}`);
+    return null;
+  }
+}
+
+// The server only stores literal #hex, so send hex. Cycling the palette means new
+// categories are visually distinguishable without asking the user to pick a colour.
+const CAT_COLORS = ["#7aa2f7", "#9ece6a", "#e0af68", "#bb9af7", "#7dcfff", "#f7768e", "#73daca"];
+const nextCategoryColor = () => CAT_COLORS[(uiMeta.categories || []).length % CAT_COLORS.length];
+
+// Make a session visible after it moves: expand its group, scroll to it, flash it.
+function revealSession(id, msg) {
+  const s = sessions.find((x) => x.id === id);
+  if (s) {
+    const key = groupMode() === "cat"
+      ? (s.categoryId ? `cat:${s.categoryId}` : "cat:none")
+      : `dir:${s.cwd ?? ""}`;
+    if (collapsed.has(key)) { collapsed.delete(key); saveCollapsed(); }
+  }
+  renderSessions();
+  const row = rowFor(id);
+  if (row) {
+    row.scrollIntoView({ block: "nearest" });
+    row.classList.add("flash");
+  }
+  if (msg) toast(msg);
+}
+
+// ── Category management (§3: create AND name them) ─────────
+
+// Without rename/delete a typo is permanent, and the colour path is dead code.
+async function manageCategories() {
+  const cats = uiMeta.categories || [];
+  if (!cats.length) {
+    const cat = await createCategory();
+    if (cat) renderSessions();
+    return;
+  }
+  const list = cats.map((c, i) => `${i + 1}. ${c.name}`).join("\n");
+  const pick = prompt(`Categories:\n${list}\n\nType a number to edit, or a new name to create:`);
+  if (pick == null || !pick.trim()) return;
+
+  const idx = Number(pick.trim());
+  if (!Number.isInteger(idx) || idx < 1 || idx > cats.length) {
+    const cat = await createCategory(pick.trim());
+    if (cat) renderSessions();
+    return;
+  }
+
+  const cat = cats[idx - 1];
+  const used = sessions.filter((s) => s.categoryId === cat.id).length;
+  const action = prompt(
+    `“${cat.name}” (${used} session${used === 1 ? "" : "s"})\n\n`
+    + `Type a new name to rename, "color" to recolour, or "delete" to remove it:`,
+    cat.name,
+  );
+  if (action == null) return;
+  const verb = action.trim().toLowerCase();
+
+  if (verb === "delete") {
+    if (!confirm(`Delete “${cat.name}”?\n\n${used} session${used === 1 ? "" : "s"} will become Uncategorized. The sessions themselves are not touched.`)) return;
+    await categoryRequest(`/api/categories/${encodeURIComponent(cat.id)}`, "DELETE");
+    return;
+  }
+  if (verb === "color") {
+    const c = prompt("Hex colour (e.g. #7aa2f7):", cat.color || nextCategoryColor());
+    if (c == null || !c.trim()) return;
+    if (!safeColor(c.trim())) { toast("colour must be hex like #7aa2f7"); return; }
+    await categoryRequest(`/api/categories/${encodeURIComponent(cat.id)}`, "PATCH", { color: c.trim() });
+    return;
+  }
+  if (action.trim() && action.trim() !== cat.name) {
+    await categoryRequest(`/api/categories/${encodeURIComponent(cat.id)}`, "PATCH", { name: action.trim() });
+  }
+}
+
+async function categoryRequest(url, method, body) {
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: body ? { "content-type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? res.statusText);
+    await loadMeta();
+    // A delete cascades server-side, so the session list needs re-reading too.
+    await loadSessions();
+    if (current) refreshHeaderMeta();
+  } catch (err) {
+    toast(`category update failed: ${err.message}`);
+  }
+}
+
+// Patch and then reconcile in place — reloading the list from scratch would throw away the
+// user's scroll position and which groups they had open.
+async function patchSessionMeta(id, patch) {
+  try {
+    const res = await fetch(`/api/session/${encodeURIComponent(id)}/meta`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? res.statusText);
+    const next = await res.json();
+    const s = sessions.find((x) => x.id === id);
+    if (s) Object.assign(s, { name: next.name, categoryId: next.categoryId, autoQueue: next.autoQueue, displayName: displayNameOf({ ...s, name: next.name }) });
+    if (current?.meta.id === id) {
+      Object.assign(current.meta, { name: next.name, categoryId: next.categoryId, autoQueue: next.autoQueue });
+      refreshHeaderMeta();
+    }
+    renderSessions();
+    return true;
+  } catch (err) {
+    toast(`update failed: ${err.message}`);
+    renderSessions();
+    return false;
+  }
+}
+
+// ── Session view ───────────────────────────────────────────
+
+async function openSession(id) {
+  const res = await fetch(`/api/session/${encodeURIComponent(id)}`);
+  if (!res.ok) { toast(`could not open session (${res.status})`); return; }
+  current = await res.json();
+  openGroups = new Set(); // expansion state is per-session and may reset on switch
+  renderSession();
+  // Only an explicit open resets the reading position — never a background refresh.
+  document.querySelector("main").scrollTop = 0;
+
+  // The row may live in a collapsed group, in which case the header would name a
+  // session that is nowhere in the sidebar.
+  const s = sessions.find((x) => x.id === id);
+  if (s) {
+    const key = groupMode() === "cat"
+      ? (s.categoryId ? `cat:${s.categoryId}` : "cat:none")
+      : `dir:${s.cwd ?? ""}`;
+    if (collapsed.has(key)) { collapsed.delete(key); saveCollapsed(); }
+  }
+  renderSessions();
+  const row = rowFor(id);
+  if (row) row.scrollIntoView({ block: "nearest" });
+  if (location.hash.slice(1) !== id) location.hash = id;
+}
+
+// True while any archived note is mid-playback. A rebuild would detach the element and
+// stop the sound, so a refresh defers until playback ends.
+const audioBusy = () =>
+  playingAll || [...document.querySelectorAll("main audio")].some((a) => !a.paused && !a.ended && a.currentTime > 0);
+
+function renderSession() {
+  const { meta, items } = current;
+  const notes = items.filter((i) => i.kind === "voice");
+  const audioCount = notes.filter((n) => n.audio).length;
+  const overridden = !!(meta.name && meta.name.trim());
+  const aq = autoQueueNote(voiceCoverage);
+  // The toggle only does anything while this session id is actually running.
+  const live = !!statusMap[meta.id];
+
+  const head = `
+    <div class="head">
+      <h2 id="headName">${esc(displayNameOf(meta))}</h2>
+      <div class="subtitle" id="headSub" ${overridden ? "" : "hidden"}>${esc(meta.title)}</div>
+      <div class="m">
+        <span>${fmtDate(meta.startedAt)}</span>
+        <span class="cwd">${esc(shortPath(meta.cwd))}</span>
+        <span>${notes.length} voice note${notes.length === 1 ? "" : "s"} · ${audioCount} playable</span>
+        <span data-stat="${esc(meta.id)}" data-big="1" aria-live="polite"></span>
+      </div>
+      <div class="aq">
+        <label class="toggle" title="Summarize and archive every response in this session as a voice note. Nothing is played aloud — the notes go straight to the archive for you to browse later.">
+          <input type="checkbox" id="autoQueue" ${meta.autoQueue ? "checked" : ""} /> auto-queue every response
+        </label>
+        <span class="note${aq.caution ? " caution" : ""}">${esc(aq.text)}</span>
+        ${live ? "" : `<span class="note">this session is not running — the setting is saved and applies if it resumes</span>`}
+      </div>
+      ${notes.length ? `<div class="aq"><label class="toggle" title="Hide messages that are not voice notes">`
+        + `<input type="checkbox" id="notesOnly" ${notesOnly ? "checked" : ""} /> voice notes only</label>`
+        + `<span class="note">j / k jump between notes · / focuses the filter</span></div>` : ""}
+    </div>`;
+
+  // "voice notes only" keeps the paired groups (a group IS a note) and drops the rest.
+  const nodes = pairTimeline(items)
+    .filter((n) => !notesOnly || n.type === "group" || n.item.kind === "voice");
+  const body = nodes.map(renderNode).join("");
+  $("main").innerHTML = head + `<div class="body">${body || '<div class="empty">Nothing recorded.</div>'}</div>`;
+
+  voiceEls = [...document.querySelectorAll('[data-voice="1"]')];
+  cursor = -1;
+  $("jump").hidden = voiceEls.length === 0;
+
+  for (const btn of document.querySelectorAll("[data-speak]")) {
+    btn.onclick = () => speak(btn);
+  }
+  for (const d of document.querySelectorAll("details.src")) {
+    d.addEventListener("toggle", () => {
+      if (d.open) openGroups.add(d.dataset.src); else openGroups.delete(d.dataset.src);
+    });
+  }
+  $("autoQueue").onchange = (e) => setAutoQueue(e.target);
+  const nf = $("notesOnly");
+  if (nf) nf.onchange = (e) => { notesOnly = e.target.checked; renderSession(); };
+  applyStatus();
+}
+
+// Revert the checkbox if the server refused, so it cannot sit there lying about state.
+async function setAutoQueue(box) {
+  const want = box.checked;
+  const ok = await patchSessionMeta(current.meta.id, { autoQueue: want });
+  if (!ok) box.checked = !want;
+}
+
+// Header bits that a PATCH can change, updated in place so the timeline survives.
+function refreshHeaderMeta() {
+  const { meta } = current;
+  const name = $("headName");
+  const sub = $("headSub");
+  const box = $("autoQueue");
+  if (name) name.textContent = displayNameOf(meta);
+  if (sub) { sub.textContent = meta.title ?? ""; sub.hidden = !(meta.name && meta.name.trim()); }
+  if (box) box.checked = !!meta.autoQueue;
+}
+
+function renderNode(node) {
+  return node.type === "group" ? renderGroup(node) : renderItem(node.item);
+}
+
+// One card: the voice note(s) on top, the response they summarize collapsed underneath.
+function renderGroup(g) {
+  const words = wordCount(g.source.text);
+  const open = openGroups.has(g.key);
+  const label = g.notes.length === 1 ? "♪ voice note" : `♪ ${g.notes.length} voice notes`;
+  return `
+    <div class="item">
+      <div class="gutter">${fmtTime(g.notes[0].ts)}</div>
+      <div>
+        <div class="who voice">${label}</div>
+        <div class="card">
+          ${g.notes.map((n) => `<div class="vnote" data-voice="1">${voiceBody(n)}</div>`).join("")}
+          <details class="src" data-src="${esc(g.key)}"${open ? " open" : ""}>
+            <summary>source response (${words} word${words === 1 ? "" : "s"})</summary>
+            <div class="srcbody">
+              <div class="who assistant">assistant${g.source.model ? ` · ${esc(g.source.model)}` : ""}</div>
+              ${assistantBody(g.source)}
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>`;
+}
+
+function voiceBody(it) {
+  const player = it.audio
+    ? `<audio controls preload="none" src="/api/audio/${encodeURI(it.audio)}"></audio>`
+    : `<span class="warn">no audio archived</span>
+       <button data-speak="1" data-text="${esc(it.text)}" ${it.voice ? `data-voice-name="${esc(it.voice)}"` : ""} ${it.speed ? `data-speed="${Number(it.speed) || ""}"` : ""}>▶ synthesize now</button>`;
+  const bits = [
+    it.voice ? esc(it.voice) : null,
+    it.speed ? `${Number(it.speed) || ""}×` : null,
+    fmtDur(it.durationMs) || null,
+    fmtSize(it.bytes) || null,
+    it.source === "tool" ? "tts tool" : null,
+    it.source === "queue" ? "auto-queued" : null,
+    it.orphan ? "sidecar only" : null,
+  ].filter(Boolean);
+
+  return `
+    <div class="text">${esc(it.text)}</div>
+    <div class="row">${player}<span class="meta">${bits.join(" · ")}</span></div>
+    ${it.error ? `<div class="warn">${esc(it.error)}</div>` : ""}`;
+}
+
+function assistantBody(it) {
+  const tools = (it.tools ?? [])
+    .map((t) => `<div class="tool" title="${esc(t.args)}">${esc(t.name)}${t.args ? ` · ${esc(t.args)}` : ""}</div>`)
+    .join("");
+  const text = (it.text ?? "").trim();
+  return `
+    ${text ? `<div class="text">${esc(it.text)}</div>` : ""}
+    ${tools ? `<div class="tools">${tools}</div>` : ""}
+    ${text ? `<div class="row"><button data-speak="1" data-text="${esc(it.text.slice(0, 1200))}">♪ read aloud</button></div>` : ""}`;
+}
+
+function renderItem(it) {
+  const time = `<div class="gutter">${fmtTime(it.ts)}</div>`;
+
+  if (it.kind === "voice") {
+    return `
+      <div class="item" data-voice="1">
+        ${time}
+        <div>
+          <div class="who voice">♪ voice note</div>
+          <div class="card">${voiceBody(it)}</div>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="item ${it.kind}">
+      ${time}
+      <div>
+        <div class="who ${it.kind}">${it.kind}${it.kind === "assistant" && it.model ? ` · ${esc(it.model)}` : ""}</div>
+        ${assistantBody(it)}
+      </div>
+    </div>`;
+}
+
+// ── Live processing status (§1) ────────────────────────────
+
+function statusHTML(st, big, recent) {
+  const p = phaseInfo(st, recent);
+  if (!p) return "";
+  // The stalled explanation only existed in a title, so it was unavailable to keyboard,
+  // touch and assistive tech. The header has room to say it outright.
+  const extras = big
+    ? [
+        p.detail ? esc(p.detail) : null,
+        p.queueDepth > 0 ? `queue ${p.queueDepth}` : null,
+        p.stalled ? "no progress reported — looks wedged" : null,
+      ].filter(Boolean).join(" · ")
+    : "";
+  return `<span class="${p.cls}${big ? " big" : ""}" title="${esc(p.title)}">`
+    + `<span class="sdot"></span>${p.stalled ? "⚠ " : ""}${esc(p.label)}`
+    + `${extras ? ` <span class="meta">${extras}</span>` : ""}</span>`;
+}
+
+// Surgical: writes only into the reserved [data-stat] spans, so the timeline (scroll
+// position, open disclosures, playing <audio>) is untouched by a poll.
+//
+// The signature check matters more than it looks: rewriting innerHTML recreates the
+// .sdot node, which restarts the 1.1s pulse animation. Doing that every second means it
+// never completes a cycle, so the "live" indicator never actually pulses.
+function applyStatus() {
+  for (const el of document.querySelectorAll("[data-stat]")) {
+    const id = el.dataset.stat;
+    const big = el.dataset.big === "1";
+    const st = statusMap[id];
+    const recent = lastSeen.get(id);
+    const p = phaseInfo(st, recent);
+    // Include the latch's whole-second age so the "3s ago" countdown still ticks.
+    const sig = p
+      ? `${p.phase}|${p.stalled}|${p.label}|${big ? `${p.detail}|${p.queueDepth}` : ""}`
+      : "";
+    if (statSig.get(el) === sig) continue;
+    statSig.set(el, sig);
+    el.innerHTML = statusHTML(st, big, recent);
+  }
+}
+
+async function pollStatus() {
+  let next;
+  try {
+    const res = await fetch("/api/status");
+    if (!res.ok) throw new Error(String(res.status));
+    next = (await res.json()).sessions ?? {};
+  } catch {
+    // Silently keeping the old map leaves a pulsing "speaking" dot forever after the
+    // server or the pi process goes away — a false positive on the one thing the
+    // status feed exists to tell the truth about.
+    if (++statusFails >= 3) {
+      statusMap = {};
+      lastSeen.clear();
+      showStatusOffline(true);
+      applyStatus();
+    }
+    return;
+  }
+
+  statusFails = 0;
+  showStatusOffline(false);
+  // Latch each non-idle phase so work shorter than the poll interval leaves a trace.
+  const now = Date.now();
+  for (const [id, st] of Object.entries(next)) {
+    if (st && st.phase && st.phase !== "idle" && !st.stalled) lastSeen.set(id, { phase: st.phase, at: now });
+  }
+  statusMap = next;
+  applyStatus();
+}
+
+function showStatusOffline(on) {
+  const box = $("statusOff");
+  if (!box) return;
+  box.innerHTML = on
+    ? `<span class="statoff" title="Cannot reach the archive server, so live session status is unknown">⚠ status feed offline</span>`
+    : "";
+}
+
+// ── On-demand synthesis (live Kokoro server) ───────────────
+
+async function speak(btn) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "synthesizing…";
+  try {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        text: btn.dataset.text,
+        voice: btn.dataset.voiceName || undefined,
+        speed: btn.dataset.speed ? Number(btn.dataset.speed) : undefined,
+      }),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? res.statusText);
+    const url = URL.createObjectURL(await res.blob());
+    // Exactly ONE element: a second hidden Audio() playing the same blob meant the
+    // visible transport controlled nothing and pressing play gave two overlapping voices.
+    const player = document.createElement("audio");
+    player.controls = true;
+    player.src = url;
+    player.addEventListener("ended", () => URL.revokeObjectURL(url), { once: true });
+    btn.replaceWith(player);
+    player.play().catch(() => {});
+  } catch (err) {
+    btn.textContent = `✗ ${err.message}`;
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2500);
+  }
+}
+
+// ── Navigation ─────────────────────────────────────────────
+
+function jumpTo(i) {
+  if (!voiceEls.length) return;
+  cursor = (i + voiceEls.length) % voiceEls.length;
+  voiceEls[cursor].scrollIntoView({ block: "center", behavior: "smooth" });
+  voiceEls[cursor].animate(
+    [{ filter: "brightness(1.6)" }, { filter: "brightness(1)" }],
+    { duration: 700 },
+  );
+}
+
+$("nextVoice").onclick = () => jumpTo(cursor + 1);
+$("prevVoice").onclick = () => jumpTo(cursor - 1);
+
+// Chain every archived note in the session back to back. Restartable and stoppable:
+// once started it used to be unstoppable, and a background re-render silently stalled
+// the chain because it holds element references a rebuild detaches.
+$("playAll").onclick = async () => {
+  const btn = $("playAll");
+  if (playingAll) { playingAll = false; return; }
+
+  const players = voiceEls.map((el) => el.querySelector("audio")).filter(Boolean);
+  if (!players.length) { toast("no archived audio in this session"); return; }
+
+  playingAll = true;
+  btn.textContent = "■ stop";
+  try {
+    for (const [i, p] of players.entries()) {
+      if (!playingAll) break;
+      // A rebuild between notes detaches the element; stop rather than hang forever.
+      if (!p.isConnected) break;
+      jumpTo(i);
+      try {
+        p.currentTime = 0;
+        await p.play();
+        await new Promise((r) => { p.onended = r; p.onerror = r; });
+      } catch { /* skip unplayable */ }
+      p.onended = null;
+      p.onerror = null;
+    }
+  } finally {
+    playingAll = false;
+    btn.textContent = "▶ play all";
+  }
+};
+
+document.addEventListener("keydown", (e) => {
+  // SELECT/TEXTAREA/contenteditable also swallow these keys, and a bare key check
+  // would hijack Cmd+J / Ctrl+K.
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+  if (e.key === "j") jumpTo(cursor + 1);
+  else if (e.key === "k") jumpTo(cursor - 1);
+  else if (e.key === "/") { e.preventDefault(); $("q").focus(); }
+});
+
+$("q").oninput = renderSessions;
+$("onlyVoice").onchange = loadSessions;
+$("groupMode").value = groupMode();
+$("groupMode").onchange = (e) => {
+  try { localStorage.setItem(LS_GROUP, e.target.value === "cat" ? "cat" : "dir"); } catch { /* private mode */ }
+  renderSessions();
+};
+$("newCat").onclick = async () => { if (await createCategory()) renderSessions(); };
+$("mgrCat").onclick = () => manageCategories();
+$("expandAll").onclick = () => { collapsed.clear(); saveCollapsed(); renderSessions(); };
+$("collapseAll").onclick = () => {
+  for (const g of groupSessions(sessions, groupMode(), uiMeta.categories)) collapsed.add(g.key);
+  saveCollapsed();
+  renderSessions();
+};
+
+// Browser Back changed the URL but not the view.
+window.addEventListener("hashchange", () => {
+  const id = location.hash.slice(1);
+  if (id && id !== current?.meta.id) openSession(id);
+});
+
+// ── Boot ───────────────────────────────────────────────────
+
+(async () => {
+  const health = await fetch("/api/health").then((r) => r.json()).catch(() => null);
+  if (health?.tts?.modelLoaded) {
+    $("ttsDot").classList.add("on");
+    $("ttsDot").title = `TTS server up (${health.tts.activeDtype})`;
+  } else {
+    $("ttsDot").title = "TTS server not running — archived audio still plays";
+  }
+  if (health?.voiceCoverage) voiceCoverage = health.voiceCoverage;
+
+  await loadMeta();
+  await loadSessions();
+  const id = location.hash.slice(1);
+  if (id) openSession(id);
+  else if (sessions.length) openSession(sessions[0].id);
+
+  await pollStatus();
+  setInterval(pollStatus, 1000);
+
+  // Cheap live refresh while a session is active in another window.
+  setInterval(async () => {
+    if (renaming) return; // do not yank the input out from under the user mid-rename
+    const before = current?.meta.id;
+    await loadMeta();
+    await loadSessions();
+    if (!before) return;
+
+    const res = await fetch(`/api/session/${encodeURIComponent(before)}`).catch(() => null);
+    if (!res || !res.ok) return;
+    const next = await res.json();
+    // Still the same session? A slow response can land after the user switched away.
+    if (current?.meta.id !== before) return;
+
+    // Compare CONTENT, not item count: the audio sidecar lands ~1s after the session
+    // entry without adding an item, so a length check leaves the newest note showing
+    // "no audio archived" until the user switches sessions and back.
+    if (timelineSig(next.items) === timelineSig(current.items)) return;
+
+    // Never rip out audio the user is listening to — requirement 1 exists precisely to
+    // watch a session that is still working, so this is the common case, not the edge.
+    if (audioBusy()) { pendingTimeline = next; return; }
+    current = next;
+    renderSession();
+  }, 15000);
+
+  // Apply a refresh that was deferred because audio was playing, once it stops.
+  setInterval(() => {
+    if (!pendingTimeline || audioBusy() || renaming) return;
+    if (current?.meta.id !== pendingTimeline.meta.id) { pendingTimeline = null; return; }
+    current = pendingTimeline;
+    pendingTimeline = null;
+    renderSession();
+  }, 1500);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,465 @@
+diff -ruN a/extensions/server.ts b/extensions/server.ts
+--- a/extensions/server.ts	2026-08-05 14:14:51
++++ b/extensions/server.ts	2026-08-05 14:14:51
+@@ -20,7 +20,7 @@
+ import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+ import { homedir } from "node:os";
+ import { join, resolve } from "node:path";
+-import { cleanTextForSpeech } from "./text.ts";
++import { cleanTextForSpeech, splitForSynthesis } from "./text.ts";
+ 
+ // ── Configuration ──────────────────────────────────────────────────
+ const MODEL_ID = "onnx-community/Kokoro-82M-v1.0-ONNX";
+@@ -543,16 +543,34 @@
+       const voice = (body.voice as string) || "af_heart";
+       const speed = Number(body.speed ?? 1.0);
+ 
++      // Kokoro truncates anything past ~510 phoneme tokens *silently*, so long
++      // text is synthesized in sentence-sized chunks and concatenated. Text that
++      // already fits yields exactly one chunk and one model call, as before.
++      const chunks = splitForSynthesis(spokenText);
++
+       console.log(
+-        `[pi-voice] Synthesizing: "${spokenText.slice(0, 60)}${spokenText.length > 60 ? "..." : ""}" (voice=${voice}, speed=${speed}, dtype=${activeDtype})`,
++        `[pi-voice] Synthesizing: "${spokenText.slice(0, 60)}${spokenText.length > 60 ? "..." : ""}" (voice=${voice}, speed=${speed}, dtype=${activeDtype}${chunks.length > 1 ? `, ${spokenText.length} chars in ${chunks.length} chunks` : ""})`,
+       );
+ 
+-      const audio = await tts.generate(spokenText, {
+-        voice: voice as keyof typeof tts.voices,
+-        speed,
+-      });
+-      const samples = audio.audio as Float32Array;
+-      const sampleRate = audio.sampling_rate;
++      const parts: Float32Array[] = [];
++      let sampleRate = 24000;
++      for (let i = 0; i < chunks.length; i++) {
++        const chunk = chunks[i] as string;
++        if (chunks.length > 1) {
++          console.log(`[pi-voice]   chunk ${i + 1}/${chunks.length} (${chunk.length} chars)`);
++        }
++        const audio = await tts.generate(chunk, {
++          voice: voice as keyof typeof tts.voices,
++          speed,
++        });
++        parts.push(audio.audio as Float32Array);
++        sampleRate = audio.sampling_rate;
++      }
++
++      const samples = concatSamples(parts, sampleRate);
++      console.log(
++        `[pi-voice] Synthesized ${(samples.length / sampleRate).toFixed(1)}s of audio from ${chunks.length} chunk(s)`,
++      );
+       return { wav: float32ToWav(samples, sampleRate) } as const;
+     });
+ 
+@@ -582,6 +600,30 @@
+   console.log("[pi-voice] Shutdown requested");
+   req.socket.destroy();
+   process.exit(0);
++}
++
++// Silence inserted at chunk seams. Kokoro renders its own trailing silence per
++// call, but a short pad keeps a clipped final consonant from colliding with the
++// next chunk's first phoneme; 60ms is below the natural sentence pause, so the
++// join stays inaudible.
++const CHUNK_GAP_MS = 60;
++
++/** Concatenate per-chunk sample buffers, padding the seams with brief silence. */
++function concatSamples(parts: Float32Array[], sampleRate: number): Float32Array {
++  if (parts.length === 0) return new Float32Array(0);
++  if (parts.length === 1) return parts[0] as Float32Array;
++
++  const gap = Math.round((CHUNK_GAP_MS / 1000) * sampleRate);
++  const total =
++    parts.reduce((sum, p) => sum + p.length, 0) + gap * (parts.length - 1);
++  const out = new Float32Array(total);
++  let offset = 0;
++  for (let i = 0; i < parts.length; i++) {
++    const part = parts[i] as Float32Array;
++    out.set(part, offset);
++    offset += part.length + (i < parts.length - 1 ? gap : 0);
++  }
++  return out;
+ }
+ 
+ // ── WAV encoder (Float32 → 16-bit PCM) ────────────────────────────
+diff -ruN a/extensions/text.test.ts b/extensions/text.test.ts
+--- a/extensions/text.test.ts	2026-08-05 14:14:51
++++ b/extensions/text.test.ts	2026-08-05 14:14:51
+@@ -10,11 +10,16 @@
+   cleanTextForSpeech,
+   extractLastMessage,
+   extractTextContent,
++  MAX_SYNTHESIS_COST,
+   SPEED_VALUES,
+   speedToIndex,
++  splitForSynthesis,
++  synthesisCost,
+   voiceHint,
+ } from "./text.ts";
+ 
++const words = (s: string) => s.split(/\s+/).filter(Boolean);
++
+ describe("speedToIndex", () => {
+   it("finds the exact speed in SPEED_VALUES", () => {
+     assert.equal(speedToIndex(1.0), SPEED_VALUES.indexOf("1.0"));
+@@ -132,5 +137,116 @@
+     assert.equal(extractLastMessage({}), "");
+     assert.equal(extractLastMessage({ messages: [] }), "");
+     assert.equal(extractLastMessage({ message: { content: [] } }), "");
++  });
++});
++
++describe("splitForSynthesis", () => {
++  it("returns text that already fits as a single chunk, untouched", () => {
++    const short = "Four of five tests pass, and the refresh token one still fails.";
++    assert.deepEqual(splitForSynthesis(short), [short]);
++  });
++
++  it("returns nothing for empty or whitespace-only input", () => {
++    assert.deepEqual(splitForSynthesis(""), []);
++    assert.deepEqual(splitForSynthesis("   \n\n  "), []);
++  });
++
++  it("never exceeds the budget — the whole point (nothing gets truncated)", () => {
++    const long = "This sentence carries a fact about the build. ".repeat(60);
++    for (const chunk of splitForSynthesis(long)) {
++      assert.ok(
++        synthesisCost(chunk) <= MAX_SYNTHESIS_COST,
++        `chunk cost ${synthesisCost(chunk)} exceeds ${MAX_SYNTHESIS_COST}`,
++      );
++    }
++  });
++
++  it("loses no words", () => {
++    const long =
++      "Every voice note ran on the big cloud model. I pinned it to a small local one instead. " +
++      "Twelve notes came back in under a third of a second each. One catch remains for restarts. ".repeat(8);
++    const chunks = splitForSynthesis(long);
++    assert.ok(chunks.length > 1);
++    assert.deepEqual(words(chunks.join(" ")), words(long));
++  });
++
++  it("splits on sentence boundaries when it can", () => {
++    const text = `${"a".repeat(300)}. ${"b".repeat(300)}.`;
++    assert.deepEqual(splitForSynthesis(text), [`${"a".repeat(300)}.`, `${"b".repeat(300)}.`]);
++  });
++
++  it("packs several short sentences into one chunk to minimise model calls", () => {
++    const text = `${"One short line. ".repeat(40)}`;
++    const chunks = splitForSynthesis(text);
++    // 40 sentences would be 40 model calls unpacked; packing keeps it near ceil(640/380).
++    assert.ok(chunks.length <= 3, `expected <= 3 packed chunks, got ${chunks.length}`);
++  });
++
++  it("hard-splits a single over-long sentence on word boundaries", () => {
++    const runOn = `${"word ".repeat(200).trim()}.`;
++    const chunks = splitForSynthesis(runOn);
++    assert.ok(chunks.length > 1);
++    for (const chunk of chunks) assert.ok(synthesisCost(chunk) <= MAX_SYNTHESIS_COST);
++    // No word was cut in half.
++    for (const w of words(chunks.join(" "))) assert.ok(w === "word" || w === "word.");
++  });
++
++  it("splits mid-token only for a pathological unbroken run", () => {
++    const monster = `x${"y".repeat(1200)}`;
++    const chunks = splitForSynthesis(monster);
++    assert.ok(chunks.length >= 3);
++    for (const chunk of chunks) assert.ok(synthesisCost(chunk) <= MAX_SYNTHESIS_COST);
++    assert.equal(chunks.join(""), monster);
++  });
++
++  it("does not split on abbreviations or initials", () => {
++    const text = `${"Dr. Smith reviewed it with J. Doe, approx. twice, e.g. on Tue. ".repeat(8)}`;
++    for (const chunk of splitForSynthesis(text)) {
++      assert.ok(!/\b(?:Dr|approx|e\.g|J)\.$/.test(chunk), `split at an abbreviation: ${chunk}`);
++    }
++  });
++
++  it("treats paragraph breaks as hard boundaries", () => {
++    const text = `${"First paragraph fact. ".repeat(12)}\n\n${"Second paragraph fact. ".repeat(12)}`;
++    const chunks = splitForSynthesis(text);
++    for (const chunk of chunks) {
++      const mixes = chunk.includes("First paragraph") && chunk.includes("Second paragraph");
++      assert.ok(!mixes, "a chunk spanned a paragraph break");
++    }
++  });
++
++  it("respects a caller-supplied budget", () => {
++    const text = "Short sentence here. ".repeat(20);
++    for (const chunk of splitForSynthesis(text, 60)) assert.ok(synthesisCost(chunk) <= 60);
++  });
++});
++
++describe("synthesisCost", () => {
++  it("charges digits and acronyms more than plain letters", () => {
++    assert.ok(synthesisCost("0.0037") > synthesisCost("abcdef"));
++    assert.ok(synthesisCost("TTS ONNX") > synthesisCost("tts onnx"));
++    assert.ok(synthesisCost("$100") > synthesisCost("cost"));
++  });
++
++  it("scores an isolated capital as a plain letter, not an acronym", () => {
++    assert.equal(synthesisCost("A cat"), synthesisCost("a cat"));
++  });
++
++  it("keeps a length-compliant voice note inside the budget as one chunk", () => {
++    // 55 words, the prompt's hard cap — must stay a single model call.
++    const note = `${"the local model kept every fact and the note stayed short ".repeat(5)}`.trim();
++    assert.ok(note.split(/\s+/).length >= 50);
++    assert.ok(synthesisCost(note) <= MAX_SYNTHESIS_COST);
++    assert.equal(splitForSynthesis(note).length, 1);
++  });
++
++  it("splits digit-dense text that raw character count would wrongly pass", () => {
++    // 260 chars: under any 300-char budget, but past the measured 236-char cliff.
++    const dense = "It went from 1.42 seconds and $0.0037 per call down to 0.28 seconds, across 12 of 15 runs, on version 0.83.4. ".repeat(3).slice(0, 260);
++    assert.ok(dense.length < 300);
++    assert.ok(splitForSynthesis(dense).length > 1, "digit-dense text must be split");
++    for (const chunk of splitForSynthesis(dense)) {
++      assert.ok(synthesisCost(chunk) <= MAX_SYNTHESIS_COST);
++    }
+   });
+ });
+diff -ruN a/extensions/text.ts b/extensions/text.ts
+--- a/extensions/text.ts	2026-08-05 14:14:51
++++ b/extensions/text.ts	2026-08-05 14:14:51
+@@ -100,3 +100,197 @@
+     .replace(/\n{3,}/g, "\n\n")
+     .trim();
+ }
++
++// ── Synthesis chunking ─────────────────────────────────────────────
++//
++// Kokoro's transformer accepts at most 512 phoneme tokens per forward pass
++// (tokenizer_config.json: model_max_length = 512). kokoro-js tokenizes with
++// { truncation: true } and clamps the style index at 509, so text past ~510
++// tokens is dropped *silently*: the request still returns 200 and a valid WAV
++// that simply stops mid-thought (~23s at speed 1.25). Nothing warns. Long text
++// must therefore be split, synthesized piecewise, and concatenated.
++//
++// Phoneme count is only knowable after phonemization, which happens inside
++// kokoro-js and is not exported. So we estimate it from the source text with a
++// weighted character cost, calibrated by measuring where real synthesis
++// saturates. Measured cut-off points (fp32, af_heart, speed 1.0):
++//
++//   corpus           cliff (chars)   cost at cliff
++//   plain prose            450            450
++//   numeric dense          236            448
++//   acronym heavy          242            467
++//   mixed report           427            476   (held out)
++//   clipped punctuation    484            484   (held out)
++//
++// Raw character count is useless as a budget — the cliff moves by 2x between
++// prose and digit-dense text. The weighted cost holds within 1.08x across all
++// five corpora, including the two held-out ones, so it is a usable proxy.
++
++/** Characters that phonemize into whole words ("$" → "dollars"). */
++const SYMBOL_CHARS = new Set("$%&@#/*+=<>~^|".split(""));
++
++/**
++ * One character's contribution to the phoneme budget. Digits dominate
++ * ("0.0037" → "zero point zero zero three seven"), symbols become words, and
++ * letters inside an acronym get spelled out one phoneme group each ("TTS").
++ */
++function charCost(ch: string, prev: string, next: string): number {
++  if (ch >= "0" && ch <= "9") return 6;
++  if (SYMBOL_CHARS.has(ch)) return 7;
++  const upper = (c: string) => c >= "A" && c <= "Z";
++  if (upper(ch) && (upper(prev) || upper(next))) return 3;
++  return 1;
++}
++
++/** Estimated phoneme-token cost of `text` (see the calibration table above). */
++export function synthesisCost(text: string): number {
++  let total = 0;
++  for (let i = 0; i < text.length; i++) {
++    total += charCost(text[i] ?? "", text[i - 1] ?? "", text[i + 1] ?? "");
++  }
++  return total;
++}
++
++/**
++ * Per-chunk budget: 15% under the lowest measured cliff (448). Comfortably
++ * clears a length-compliant voice note (~55 words ≈ cost 330) in a single
++ * chunk, so ordinary notes keep their original one-call prosody.
++ */
++export const MAX_SYNTHESIS_COST = 380;
++
++/** Abbreviations whose trailing period never ends a sentence. */
++const ABBREVIATIONS = new Set([
++  "mr", "mrs", "ms", "dr", "prof", "sr", "jr", "st", "mt", "etc", "vs", "eg", "ie",
++  "inc", "ltd", "co", "dept", "fig", "no", "approx", "jan", "feb", "mar", "apr",
++  "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec",
++]);
++
++/** True if `unit` ends in an abbreviation or initial, so it is not a sentence end. */
++function endsWithAbbreviation(unit: string): boolean {
++  const m = /(\S+)\.$/.exec(unit);
++  if (!m) return false;
++  const word = (m[1] ?? "").replace(/^[^\w]+/, "");
++  if (word.length === 1) return true; // initial: "J."
++  if (/^(?:[A-Za-z]\.)+[A-Za-z]$/.test(word)) return true; // "e.g", "U.S"
++  return ABBREVIATIONS.has(word.toLowerCase());
++}
++
++/** Split one unbroken token (a long URL, a hash) to fit the budget. */
++function splitToken(token: string, maxCost: number): string[] {
++  const pieces: string[] = [];
++  let start = 0;
++  let running = 0;
++  for (let i = 0; i < token.length; i++) {
++    const c = charCost(token[i] ?? "", token[i - 1] ?? "", token[i + 1] ?? "");
++    if (running + c > maxCost && i > start) {
++      pieces.push(token.slice(start, i));
++      start = i;
++      running = 0;
++    }
++    running += c;
++  }
++  if (start < token.length) pieces.push(token.slice(start));
++  return pieces;
++}
++
++/**
++ * Split cleaned text into synthesis-sized chunks, preferring paragraph and
++ * sentence boundaries so seams land where a speaker would pause anyway.
++ *
++ * Guarantees, in priority order:
++ *   1. Every chunk fits the budget — nothing is silently truncated.
++ *   2. No text is lost: joining the chunks reproduces every word.
++ *   3. Text that already fits returns as a single chunk, so ordinary notes take
++ *      exactly the same path (one model call) as before this existed.
++ */
++export function splitForSynthesis(text: string, maxCost = MAX_SYNTHESIS_COST): string[] {
++  const trimmed = text.trim();
++  if (!trimmed) return [];
++  if (synthesisCost(trimmed) <= maxCost) return [trimmed];
++
++  // A unit is one sentence-ish span. `endsPara` marks a paragraph's last unit:
++  // packing across that boundary would run two paragraphs together inside one
++  // synthesis call and swallow the pause a speaker would take there.
++  interface Unit {
++    text: string;
++    endsPara: boolean;
++  }
++
++  // 1. Sentence-ish units, with paragraph breaks as hard boundaries.
++  const units: Unit[] = [];
++  for (const para of trimmed.split(/\n\s*\n+/)) {
++    const p = para.trim();
++    if (!p) continue;
++    const before = units.length;
++    let start = 0;
++    const re = /[.!?…](?=[\s"'’”)\]]|$)/g;
++    let m: RegExpExecArray | null;
++    while ((m = re.exec(p)) !== null) {
++      const end = m.index + 1;
++      const unit = p.slice(start, end).trim();
++      if (unit && !endsWithAbbreviation(unit)) {
++        units.push({ text: unit, endsPara: false });
++        start = end;
++      }
++    }
++    const tail = p.slice(start).trim();
++    if (tail) units.push({ text: tail, endsPara: false });
++    const last = units[units.length - 1];
++    if (last && units.length > before) last.endsPara = true;
++  }
++
++  // 2. Units still over budget are broken on word boundaries (and mid-token
++  //    only for a pathological unbroken run).
++  const sized: Unit[] = [];
++  for (const unit of units) {
++    if (synthesisCost(unit.text) <= maxCost) {
++      sized.push(unit);
++      continue;
++    }
++    const pieces: string[] = [];
++    let line = "";
++    for (const word of unit.text.split(/\s+/)) {
++      if (synthesisCost(word) > maxCost) {
++        if (line) {
++          pieces.push(line);
++          line = "";
++        }
++        pieces.push(...splitToken(word, maxCost));
++        continue;
++      }
++      const candidate = line ? `${line} ${word}` : word;
++      if (synthesisCost(candidate) > maxCost) {
++        if (line) pieces.push(line);
++        line = word;
++      } else {
++        line = candidate;
++      }
++    }
++    if (line) pieces.push(line);
++    pieces.forEach((piece, i) =>
++      sized.push({ text: piece, endsPara: unit.endsPara && i === pieces.length - 1 }),
++    );
++  }
++
++  // 3. Repack neighbours to make as few model calls as possible, stopping at
++  //    paragraph boundaries. Cost is recomputed per append: units are short and
++  //    a voice note is a few dozen of them, so the quadratic term is noise.
++  const chunks: string[] = [];
++  let current = "";
++  for (const unit of sized) {
++    const candidate = current ? `${current} ${unit.text}` : unit.text;
++    if (synthesisCost(candidate) > maxCost) {
++      if (current) chunks.push(current);
++      current = unit.text;
++    } else {
++      current = candidate;
++    }
++    if (unit.endsPara) {
++      chunks.push(current);
++      current = "";
++    }
++  }
++  if (current) chunks.push(current);
++
++  return chunks;
++}
+diff -ruN a/src/cli.ts b/src/cli.ts
+--- a/src/cli.ts	2026-08-05 14:14:51
++++ b/src/cli.ts	2026-08-05 14:14:51
+@@ -27,6 +27,7 @@
+ 
+ import { spawn } from "node:child_process";
+ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
++import { createRequire } from "node:module";
+ import { homedir } from "node:os";
+ import { dirname, resolve } from "node:path";
+ import { fileURLToPath } from "node:url";
+@@ -39,7 +40,29 @@
+ // .ts file (possibly inside node_modules, where Node's native type stripping
+ // refuses to run), so the child Node process needs jiti's hooks registered;
+ // `--import jiti` (the main entry) does NOT register them.
+-const JITI_REGISTER = resolve(PACKAGE_ROOT, "node_modules", "jiti", "lib", "jiti-register.mjs");
++//
++// Resolve it rather than assuming PACKAGE_ROOT/node_modules/jiti: npm hoists
++// dependencies to the top of the install tree whenever it can, and pi installs
++// packages into a shared ~/.pi/agent/npm tree where hoisting is the norm. The
++// hardcoded nested path does not exist there, so the spawned server died
++// instantly with ERR_MODULE_NOT_FOUND and `server start` reported only a
++// 15-second timeout.
++//
++// Resolution goes through jiti's package.json (the one subpath its exports map
++// always exposes): "jiti/register" is export-mapped for `import` only, so
++// require.resolve rejects it, and "jiti/lib/..." is not exported at all.
++const JITI_REGISTER = (() => {
++  const candidates: string[] = [];
++  try {
++    const req = createRequire(import.meta.url);
++    candidates.push(resolve(dirname(req.resolve("jiti/package.json")), "lib", "jiti-register.mjs"));
++  } catch {
++    // fall through to the layout-specific guesses below
++  }
++  candidates.push(resolve(PACKAGE_ROOT, "node_modules", "jiti", "lib", "jiti-register.mjs"));
++  // Last resort: let the child resolve the bare specifier from its cwd.
++  return candidates.find((c) => existsSync(c)) ?? "jiti/register";
++})();
+ const CONFIG_DIR = resolve(homedir(), ".pi", "voice");
+ const CONFIG_PATH = resolve(CONFIG_DIR, "config.json");
+ const PID_PATH = resolve(CONFIG_DIR, "voice.pid");
