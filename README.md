@@ -147,6 +147,7 @@ out of the repo (see `.gitignore`):
 | | `agent/models-store.json`, `.claude-usage-cache.json` — caches |
 | | `agent/npm/` — pi-managed installs of `settings.json` `packages` |
 | | `voice/cache/`, `voice/manifest.json` — ~800MB TTS model weights |
+| | `octo-review/` — review history + blind-spot profile (self-healing) |
 
 After cloning, run `./stow-dots.sh`, then start pi once so it reinstalls the
 declared `packages` and re-authenticates (`/login`).
