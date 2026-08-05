@@ -270,7 +270,9 @@ let statusFails = 0;
 const lastSeen = new Map();
 // Signature of what each [data-stat] span currently shows, so an unchanged status is
 // not rewritten every second (which would restart the pulse animation forever).
-const statSig = new Map();
+// Weak: keyed by the element itself, so spans discarded by a re-render are collectable
+// (a strong Map would retain every span from every past render for the page's lifetime).
+const statSig = new WeakMap();
 // True while play-all is walking the timeline; lets it be stopped and blocks re-renders.
 let playingAll = false;
 // A timeline refresh held back because audio was playing; applied once it stops.

@@ -847,7 +847,16 @@ export default function (pi: ExtensionAPI) {
 
   // ── Capture ──────────────────────────────────────────────────────
 
-  pi.events.on("voice:speak_start", (data: unknown) => {
+  // The shared event bus OUTLIVES an extension instance: `/reload`, a fork or a
+  // session switch builds a fresh instance while the old instance's listeners
+  // stay subscribed unless we remove them. Left unhandled, every reload adds
+  // another archiver, so one spoken note gets archived twice (verified: two
+  // sidecars 2 ms apart carrying the same text and the same per-instance seq
+  // number), doubling both the stored notes and the TTS inference. pi-voice
+  // keeps its own `customUnsubs` list for exactly this reason.
+  const busUnsubs: Array<() => void> = [];
+
+  busUnsubs.push(pi.events.on("voice:speak_start", (data: unknown) => {
     const ev = data as SpeakStart;
     if (!ev?.text || ev.source === "sample") return;
 
@@ -914,9 +923,9 @@ export default function (pi: ExtensionAPI) {
         );
       }
     }
-  });
+  }));
 
-  pi.events.on("voice:speak_end", (data: unknown) => {
+  busUnsubs.push(pi.events.on("voice:speak_end", (data: unknown) => {
     const end = data as SpeakEnd;
     if (!end?.text || end.source === "sample") return;
 
@@ -937,7 +946,7 @@ export default function (pi: ExtensionAPI) {
         settleStatus();
       }
     }, "Archive");
-  });
+  }));
 
   // ── Source pairing + auto-queue (§2, §4) ─────────────────────────
 
@@ -1181,6 +1190,17 @@ export default function (pi: ExtensionAPI) {
   // A status file outlives its process otherwise, and the server would be left
   // guessing from the pid whether we are still here.
   pi.on("session_shutdown", async () => {
+    // Unsubscribe FIRST: this instance is done, and leaving it on the bus is
+    // what causes duplicate archiving after a reload (see busUnsubs above).
+    for (const unsub of busUnsubs) {
+      try {
+        unsub();
+      } catch {
+        /* a bus that already forgot us is fine */
+      }
+    }
+    busUnsubs.length = 0;
+
     clearSummarizeWatchdog();
     pendingSources.length = 0;
     turnBatch = [];
