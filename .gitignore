@@ -1,0 +1,39 @@
+# ---------------------------------------------------------------------------
+# Secrets — never version-control credentials
+# ---------------------------------------------------------------------------
+**/auth.json
+**/.netrc
+*.pem
+*.key
+.env
+.env.*
+
+# ---------------------------------------------------------------------------
+# pi agent — machine-local state, caches and transient logs
+# ---------------------------------------------------------------------------
+# Conversation transcripts (may contain proprietary source and secrets)
+pi/.pi/agent/sessions/
+pi/.pi/agent/run-history.jsonl
+pi/.pi/agent/powerline-footer/inbox.jsonl
+
+# Per-machine trust decisions (absolute paths, security-relevant)
+pi/.pi/agent/trust.json
+
+# Provider/model catalog + usage caches (regenerated on demand)
+pi/.pi/agent/models-store.json
+pi/.pi/agent/.claude-usage-cache.json
+
+# pi-managed npm package installs (declared in settings.json "packages")
+pi/.pi/agent/npm/
+
+# pi-voice downloaded TTS model weights (~800MB) and download state
+pi/.pi/voice/cache/
+pi/.pi/voice/manifest.json
+
+# Scratch
+pi/.pi/err.txt
+
+# ---------------------------------------------------------------------------
+# OS cruft
+# ---------------------------------------------------------------------------
+.DS_Store

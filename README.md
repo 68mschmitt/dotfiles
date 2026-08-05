@@ -66,8 +66,15 @@ dotfiles/
 │   └── .tmux.conf
 ├── ghostty/                # Ghostty terminal configuration
 │   └── .config/ghostty/config
-├── pi/                     # Pi coding agent settings/extensions/prompts
-│   └── .pi/agent/
+├── pi/                     # Pi coding agent configuration
+│   └── .pi/
+│       ├── agent/
+│       │   ├── settings.json    # Core agent settings
+│       │   ├── agents/          # Subagent definitions
+│       │   ├── extensions/      # Custom TS extensions
+│       │   ├── prompts/         # Prompt templates + assets
+│       │   └── skills/          # Agent skills
+│       └── voice/config.json    # pi-voice TTS settings
 ├── scripts/                # Utility scripts
 │   └── .scripts/
 │       ├── wallpaper-scripts/  # Dynamic wallpaper management
@@ -126,6 +133,23 @@ Automatic wallpaper rotation with blacklist support, under
 The checked-in files under `default-configs/` are just templates; your
 actual config, blacklist, and current-wallpaper state live untracked in
 `~/.config/my-wallpapers/` so day-to-day wallpaper changes never touch git.
+
+### Pi Coding Agent
+
+Only *declarative* pi config is tracked. Machine-local state and secrets stay
+out of the repo (see `.gitignore`):
+
+| Tracked | Deliberately untracked |
+| --- | --- |
+| `agent/settings.json` | `agent/auth.json` — **API credentials** |
+| `agent/agents/`, `extensions/`, `prompts/`, `skills/` | `agent/sessions/`, `run-history.jsonl` — transcripts/logs |
+| `voice/config.json` | `agent/trust.json` — per-machine trust decisions |
+| | `agent/models-store.json`, `.claude-usage-cache.json` — caches |
+| | `agent/npm/` — pi-managed installs of `settings.json` `packages` |
+| | `voice/cache/`, `voice/manifest.json` — ~800MB TTS model weights |
+
+After cloning, run `./stow-dots.sh`, then start pi once so it reinstalls the
+declared `packages` and re-authenticates (`/login`).
 
 ### Tmux
 

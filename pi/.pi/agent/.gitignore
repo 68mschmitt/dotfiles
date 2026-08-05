@@ -1,3 +1,19 @@
-# pi agent — never version-control secrets or transient session logs
+# pi agent — never version-control secrets or machine-local state.
+#
+# NOTE: ~/.pi/agent is a stow symlink to this directory, so these rules apply
+# in-place on the live agent dir. Repo-wide rules also live in the root
+# .gitignore; this file is the belt-and-braces copy that travels with the dir.
+
+# Secrets
 auth.json
+
+# Transient session transcripts / logs
 sessions/
+run-history.jsonl
+powerline-footer/inbox.jsonl
+
+# Machine-local state and caches
+trust.json
+models-store.json
+.claude-usage-cache.json
+npm/

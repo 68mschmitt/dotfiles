@@ -1,6 +1,6 @@
 {
-  "lastChangelogVersion": "0.81.1",
-  "defaultThinkingLevel": "max",
+  "lastChangelogVersion": "0.83.0",
+  "defaultThinkingLevel": "medium",
   "defaultProvider": "anthropic",
   "theme": "dark",
   "expertPanel": {
@@ -11,13 +11,9 @@
   },
   "packages": [
     "npm:pi-powerline-footer",
-    "../../projects/pi-vibe",
-    "npm:pi-subagents"
+    "npm:pi-subagents",
+    "npm:@s1m0n38/pi-voice"
   ],
-  "piVibe": {
-    "model": "anthropic/claude-haiku-4-5",
-    "genre": "sailor moon"
-  },
   "powerline": {
     "preset": "default",
     "cost": {
@@ -38,6 +34,13 @@
       }
     ]
   },
-  "showHardwareCursor": true,
-  "hideThinkingBlock": false
+  "hideThinkingBlock": false,
+  "defaultModel": "claude-opus-5",
+  "warnings": {
+    "anthropicExtraUsage": false
+  },
+  "httpIdleTimeoutMs": 60000,
+  "terminal": {
+    "showTerminalProgress": true
+  }
 }

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__TITLE__ — Domain Map</title>
+<style>
+  :root{--bg:#fff;--fg:#1c2024;--muted:#5b6570;--line:#e3e8ee;--accent:#0b6bcb;--code:#f6f8fa;--warn:#b45309;--card:#fff;--shadow:0 1px 3px rgba(0,0,0,.08)}
+  html[data-theme=dark]{--bg:#0f1419;--fg:#e6edf3;--muted:#8b949e;--line:#28313a;--accent:#58a6ff;--code:#161b22;--warn:#e3b341;--card:#131a21;--shadow:0 1px 3px rgba(0,0,0,.4)}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  #layout{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:100vh}
+  /* ---- sidebar ---- */
+  #side{position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid var(--line);padding:18px 14px 40px;background:var(--card)}
+  #side h1{font-size:15px;margin:0 0 4px;letter-spacing:.01em}
+  #side .sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+  #q{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font-size:13px}
+  #toc{list-style:none;margin:14px 0 0;padding:0;font-size:13.5px}
+  #toc li{margin:1px 0}
+  #toc a{display:block;padding:4px 8px;border-radius:5px;color:var(--fg);text-decoration:none;border-left:2px solid transparent}
+  #toc a:hover{background:var(--code)}
+  #toc a.h3{padding-left:22px;font-size:12.5px;color:var(--muted)}
+  #toc a.active{background:var(--code);border-left-color:var(--accent);color:var(--accent);font-weight:600}
+  #toc li.hide{display:none}
+  .tools{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+  .tools button{flex:1;min-width:64px;padding:5px 8px;font-size:11.5px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--fg);cursor:pointer}
+  .tools button:hover{border-color:var(--accent);color:var(--accent)}
+  /* ---- content ---- */
+  #main{padding:38px 46px 140px;max-width:1080px}
+  #main h2{margin:52px 0 14px;padding-bottom:7px;border-bottom:1px solid var(--line);font-size:25px;scroll-margin-top:18px}
+  #main h2:first-of-type{margin-top:0}
+  #main h3{margin:32px 0 10px;font-size:18.5px;scroll-margin-top:18px}
+  #main h4{margin:22px 0 8px;font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  #main table{border-collapse:collapse;width:100%;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto}
+  #main th,#main td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  #main th{background:var(--code);font-weight:600;white-space:nowrap}
+  #main code{background:var(--code);padding:1.5px 5px;border-radius:4px;font-size:.875em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  #main pre{background:var(--code);padding:13px 15px;border-radius:7px;overflow-x:auto;font-size:13px;line-height:1.5}
+  #main pre code{background:none;padding:0}
+  #main blockquote{margin:16px 0;padding:2px 16px;border-left:3px solid var(--warn);color:var(--muted)}
+  #main a{color:var(--accent)}
+  #main hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+  /* ---- diagrams ---- */
+  .fig{margin:22px 0;border:1px solid var(--line);border-radius:9px;background:var(--card);box-shadow:var(--shadow);overflow:hidden}
+  .fig-bar{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--code);font-size:11.5px;color:var(--muted)}
+  .fig-bar .name{font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+  .fig-bar .sp{flex:1}
+  .fig-bar button{padding:3px 9px;font-size:11px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);cursor:pointer}
+  .fig-bar button:hover{border-color:var(--accent);color:var(--accent)}
+  .fig-body{padding:16px;overflow:auto;text-align:center}
+  .fig-body svg{max-width:100%;height:auto}
+  .fig-src{display:none;margin:0;border-top:1px solid var(--line);border-radius:0}
+  .fig.show-src .fig-src{display:block}
+  .diag-error{color:#b91c1c;text-align:left;white-space:pre-wrap;font-size:12.5px;margin:0}
+  /* ---- fullscreen ---- */
+  #fs{position:fixed;inset:0;background:var(--bg);z-index:99;display:none;flex-direction:column}
+  #fs.on{display:flex}
+  #fs .bar{display:flex;gap:8px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line);font-size:13px}
+  #fs .bar .sp{flex:1}
+  #fs .bar button{padding:5px 12px;border:1px solid var(--line);border-radius:5px;background:var(--card);color:var(--fg);cursor:pointer}
+  #fs .stage{flex:1;overflow:auto;padding:22px;display:flex;align-items:flex-start;justify-content:center}
+  #fs .stage svg{transform-origin:top center}
+  #banner{display:none;padding:10px 16px;background:#fef3c7;color:#92400e;font-size:13.5px;border-bottom:1px solid #fcd34d}
+  #banner.on{display:block}
+  @media print{#side,.fig-bar,#fs{display:none!important}#layout{grid-template-columns:1fr}#main{padding:0;max-width:none}.fig{break-inside:avoid;box-shadow:none}}
+  @media(max-width:960px){#layout{grid-template-columns:1fr}#side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}#main{padding:24px 18px 90px}}
+</style>
+</head>
+<body>
+<div id="banner">Diagram renderer could not load from the network. Diagram sources are still readable via <b>Source</b> on each figure.</div>
+<div id="layout">
+  <nav id="side">
+    <h1>__TITLE__</h1>
+    <div class="sub">Domain map · __DATE__ · __COMMIT__</div>
+    <input id="q" type="search" placeholder="Filter sections…" autocomplete="off">
+    <div class="tools">
+      <button id="t-theme">Theme</button>
+      <button id="t-src">All source</button>
+      <button id="t-print">Print</button>
+    </div>
+    <ul id="toc"></ul>
+  </nav>
+  <main id="main"><p style="color:var(--muted)">Rendering…</p></main>
+</div>
+<div id="fs">
+  <div class="bar">
+    <b id="fs-name"></b><span class="sp"></span>
+    <button data-z="-">−</button><span id="fs-z">100%</span><button data-z="+">+</button>
+    <button data-z="0">Reset</button><button id="fs-x">Close ✕</button>
+  </div>
+  <div class="stage" id="fs-stage"></div>
+</div>
+
+<!-- ============================================================
+     DOCUMENT SOURCE — Markdown. Single source of truth.
+     Must not contain the literal sequence </script>
+     ============================================================ -->
+<script id="doc" type="text/markdown">
+# Sample
+
+Intro paragraph with `code` and **bold**.
+
+## §1 — First section
+
+| a | b |
+|---|---|
+| 1 | 2 |
+
+```mermaid
+erDiagram
+    ALPHA { string id PK }
+    BETA  { string id PK }
+    ALPHA ||..o{ BETA : "unenforced"
+```
+
+### A subsection
+
+Text after diagram.
+
+```mermaid
+flowchart LR
+    A["node one"] -->|"edge label"| B(["node two"])
+    B -. "dotted 'quoted' label" .-> C[("db")]
+```
+
+## §2 — Second section
+
+```mermaid
+this is deliberately not valid mermaid
+```
+
+Trailing prose.
+</script>
+
+<script type="module">
+// Load order: vendored local copy (offline / air-gapped) -> CDN -> degraded.
+// Local probing only happens when <html data-vendored="true">, otherwise a
+// missing ./vendor/ dir spams the console with CORS failures under file://.
+const VENDORED = document.documentElement.dataset.vendored === 'true';
+const SOURCES = {
+  mermaid: [...(VENDORED ? ['./vendor/mermaid.esm.min.mjs'] : []), 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'],
+  marked:  [...(VENDORED ? ['./vendor/marked.esm.js']      : []), 'https://cdn.jsdelivr.net/npm/marked@14/lib/marked.esm.js']
+};
+async function loadFirst(urls) {
+  for (const u of urls) { try { return await import(u); } catch {} }
+  return null;
+}
+
+const raw = document.getElementById('doc').textContent;
+const main = document.getElementById('main');
+
+// ---- split markdown into prose / mermaid parts (no parser interaction) ----
+const parts = [];
+const RE = /^```mermaid[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/gm;
+let last = 0, m;
+while ((m = RE.exec(raw)) !== null) {
+  parts.push({ kind: 'md', text: raw.slice(last, m.index) });
+  parts.push({ kind: 'diagram', text: m[1] });
+  last = RE.lastIndex;
+}
+parts.push({ kind: 'md', text: raw.slice(last) });
+
+const markedMod  = await loadFirst(SOURCES.marked);
+const mermaidMod = await loadFirst(SOURCES.mermaid);
+const marked  = markedMod?.marked ?? null;
+const mermaid = mermaidMod?.default ?? null;
+const offline = !marked || !mermaid;
+if (offline) document.getElementById('banner').classList.add('on');
+
+// Minimal fallback renderer. Only used when `marked` is unavailable; it exists so
+// the sidebar nav and tables still work with zero network access.
+const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const inl = t => esc(t)
+  .replace(/`([^`]+)`/g, '<code>$1</code>')
+  .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+function miniMd(src) {
+  const out = []; const lines = src.split(/\r?\n/);
+  let i = 0, para = [], tbl = null;
+  const flushP = () => { if (para.length) { out.push('<p>' + inl(para.join(' ')) + '</p>'); para = []; } };
+  const flushT = () => {
+    if (!tbl) return;
+    const cells = r => r.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+    const h = cells(tbl[0]).map(c => `<th>${inl(c)}</th>`).join('');
+    const b = tbl.slice(2).map(r => '<tr>' + cells(r).map(c => `<td>${inl(c)}</td>`).join('') + '</tr>').join('');
+    out.push(`<table><thead><tr>${h}</tr></thead><tbody>${b}</tbody></table>`); tbl = null;
+  };
+  const flush = () => { flushP(); flushT(); };
+  while (i < lines.length) {
+    const L = lines[i];
+    if (/^```/.test(L)) { flush(); const buf = []; i++; while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]); i++; out.push(`<pre><code>${esc(buf.join('\n'))}</code></pre>`); continue; }
+    const h = L.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { flush(); out.push(`<h${h[1].length}>${inl(h[2])}</h${h[1].length}>`); i++; continue; }
+    if (/^\s*\|.*\|\s*$/.test(L)) { flushP(); (tbl ||= []).push(L); i++; continue; }
+    flushT();
+    if (/^\s*>/.test(L)) { flushP(); out.push('<blockquote>' + inl(L.replace(/^\s*>\s?/, '')) + '</blockquote>'); i++; continue; }
+    if (/^\s*([-*+]|\d+\.)\s/.test(L)) { flushP(); const items = []; while (i < lines.length && /^\s*([-*+]|\d+\.)\s/.test(lines[i])) items.push('<li>' + inl(lines[i++].replace(/^\s*([-*+]|\d+\.)\s/, '')) + '</li>'); out.push('<ul>' + items.join('') + '</ul>'); continue; }
+    if (/^\s*(---+|\*\*\*+)\s*$/.test(L)) { flush(); out.push('<hr>'); i++; continue; }
+    if (!L.trim()) { flushP(); i++; continue; }
+    para.push(L.trim()); i++;
+  }
+  flush(); return out.join('\n');
+}
+
+const md = t => marked ? marked.parse(t) : miniMd(t);
+
+// ---- build DOM ----
+main.innerHTML = '';
+let dn = 0;
+for (const p of parts) {
+  if (p.kind === 'md') {
+    if (!p.text.trim()) continue;
+    const d = document.createElement('div');
+    d.innerHTML = md(p.text);
+    while (d.firstChild) main.appendChild(d.firstChild);
+  } else {
+    dn++;
+    const fig = document.createElement('figure');
+    fig.className = 'fig';
+    fig.id = 'fig-' + dn;
+    const name = 'Figure ' + dn;
+    fig.innerHTML =
+      `<div class="fig-bar"><span class="name">${name}</span><span class="sp"></span>` +
+      `<button data-a="src">Source</button><button data-a="copy">Copy</button>` +
+      `<button data-a="full">Expand</button></div>` +
+      `<div class="fig-body"><p style="color:var(--muted);font-size:13px">…</p></div>` +
+      `<pre class="fig-src"><code></code></pre>`;
+    fig.querySelector('.fig-src code').textContent = p.text;
+    fig._src = p.text; fig._name = name;
+    main.appendChild(fig);
+  }
+}
+
+// ---- render diagrams, one at a time, isolated failures ----
+if (mermaid) {
+  mermaid.initialize({
+    startOnLoad: false, securityLevel: 'loose', maxTextSize: 500000,
+    theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'default',
+    flowchart: { htmlLabels: true, useMaxWidth: true },
+    er: { useMaxWidth: true }, themeVariables: { fontSize: '14px' }
+  });
+  const figs = [...main.querySelectorAll('.fig')];
+  for (let i = 0; i < figs.length; i++) {
+    const body = figs[i].querySelector('.fig-body');
+    try {
+      const { svg } = await mermaid.render('mm' + i + '-' + Date.now(), figs[i]._src);
+      body.innerHTML = svg;
+    } catch (e) {
+      body.innerHTML = `<pre class="diag-error">⚠ ${figs[i]._name} failed to render.\n${(e && e.message ? e.message : e)}</pre>`;
+      figs[i].classList.add('show-src');
+    }
+  }
+} else {
+  main.querySelectorAll('.fig').forEach(f => f.classList.add('show-src'));
+  main.querySelectorAll('.fig-body').forEach(b => b.remove());
+}
+// Mermaid appends throwaway measurement nodes on failure; keep the DOM clean.
+document.querySelectorAll('body > [id^="dmm"], body > [id^="mm"]').forEach(n => n.remove());
+
+// ---- table of contents ----
+const slug = s => s.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'h';
+const toc = document.getElementById('toc');
+const heads = [...main.querySelectorAll('h2,h3')];
+const seen = new Set();
+for (const h of heads) {
+  let id = slug(h.textContent);
+  while (seen.has(id)) id += '-x';
+  seen.add(id); h.id = id;
+  const li = document.createElement('li');
+  const a = document.createElement('a');
+  a.href = '#' + id; a.textContent = h.textContent;
+  if (h.tagName === 'H3') a.className = 'h3';
+  li.appendChild(a); toc.appendChild(li);
+}
+
+// ---- scroll spy ----
+const links = [...toc.querySelectorAll('a')];
+const spy = new IntersectionObserver(es => {
+  for (const e of es) {
+    if (!e.isIntersecting) continue;
+    links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id));
+  }
+}, { rootMargin: '0px 0px -75% 0px' });
+heads.forEach(h => spy.observe(h));
+
+// ---- filter ----
+document.getElementById('q').addEventListener('input', e => {
+  const v = e.target.value.toLowerCase();
+  toc.querySelectorAll('li').forEach(li =>
+    li.classList.toggle('hide', !!v && !li.textContent.toLowerCase().includes(v)));
+});
+
+// ---- figure buttons ----
+let zoom = 1;
+const fs = document.getElementById('fs'), stage = document.getElementById('fs-stage');
+const setZoom = z => { zoom = Math.min(6, Math.max(.2, z)); document.getElementById('fs-z').textContent = Math.round(zoom * 100) + '%'; const s = stage.querySelector('svg'); if (s) { s.style.transform = `scale(${zoom})`; s.style.maxWidth = 'none'; } };
+main.addEventListener('click', e => {
+  const b = e.target.closest('.fig-bar button'); if (!b) return;
+  const fig = b.closest('.fig'), a = b.dataset.a;
+  if (a === 'src') fig.classList.toggle('show-src');
+  if (a === 'copy') { navigator.clipboard?.writeText(fig._src); b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy', 1200); }
+  if (a === 'full') {
+    const svg = fig.querySelector('.fig-body svg');
+    if (!svg) return;
+    document.getElementById('fs-name').textContent = fig._name;
+    stage.innerHTML = svg.outerHTML; fs.classList.add('on'); setZoom(1);
+  }
+});
+fs.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'fs-x') fs.classList.remove('on');
+  if (b.dataset.z === '+') setZoom(zoom * 1.25);
+  if (b.dataset.z === '-') setZoom(zoom / 1.25);
+  if (b.dataset.z === '0') setZoom(1);
+});
+addEventListener('keydown', e => { if (e.key === 'Escape') fs.classList.remove('on'); });
+
+// ---- toolbar ----
+document.getElementById('t-src').addEventListener('click', () => {
+  const any = main.querySelector('.fig:not(.show-src)');
+  main.querySelectorAll('.fig').forEach(f => f.classList.toggle('show-src', !!any));
+});
+document.getElementById('t-print').addEventListener('click', () => print());
+document.getElementById('t-theme').addEventListener('click', () => {
+  const d = document.documentElement;
+  d.dataset.theme = d.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('dm-theme', d.dataset.theme);
+  location.reload();
+});
+const saved = localStorage.getItem('dm-theme');
+if (saved && saved !== document.documentElement.dataset.theme) { document.documentElement.dataset.theme = saved; location.reload(); }
+window.__dmReady = { diagrams: dn, headings: heads.length, offline };
+</script>
+</body>
+</html>
