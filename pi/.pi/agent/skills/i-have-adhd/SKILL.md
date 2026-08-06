@@ -1,5 +1,6 @@
 ---
-description: 'ADHD output style: next action first, numbered steps, restated state, no preamble. Stays on until "stop adhd mode"'
+name: i-have-adhd
+description: ADHD-friendly output style — leads with the next action, numbers multi-step work, restates progress every turn, gives concrete time estimates, and cuts preamble, recaps, and closers. Use when the user says they have ADHD, asks for ADHD-friendly or "next action first" formatting, or says "adhd mode". Persists for the rest of the session until the user says "stop adhd mode" or "normal mode".
 ---
 # i-have-adhd
 

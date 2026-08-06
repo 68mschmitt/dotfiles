@@ -1,6 +1,6 @@
 {
-  "lastChangelogVersion": "0.83.0",
-  "defaultThinkingLevel": "medium",
+  "lastChangelogVersion": "0.84.0",
+  "defaultThinkingLevel": "max",
   "defaultProvider": "anthropic",
   "theme": "dark",
   "expertPanel": {
@@ -11,8 +11,7 @@
   },
   "packages": [
     "npm:pi-powerline-footer",
-    "npm:pi-subagents",
-    "npm:@s1m0n38/pi-voice"
+    "npm:pi-subagents"
   ],
   "powerline": {
     "preset": "default",
@@ -36,6 +35,43 @@
   },
   "hideThinkingBlock": false,
   "defaultModel": "claude-opus-5",
+  "subagents": {
+    "defaultModel": "anthropic/claude-sonnet-5",
+    "agentOverrides": {
+      "scout": {
+        "model": "anthropic/claude-haiku-4-5",
+        "thinking": "low"
+      },
+      "researcher": {
+        "model": "anthropic/claude-sonnet-5",
+        "thinking": "medium"
+      },
+      "context-builder": {
+        "model": "anthropic/claude-sonnet-5",
+        "thinking": "medium"
+      },
+      "worker": {
+        "model": "anthropic/claude-sonnet-5",
+        "thinking": "medium"
+      },
+      "reviewer": {
+        "model": "anthropic/claude-sonnet-5",
+        "thinking": "medium"
+      },
+      "delegate": {
+        "model": "anthropic/claude-sonnet-5",
+        "thinking": "medium"
+      },
+      "planner": {
+        "model": "anthropic/claude-opus-5",
+        "thinking": "high"
+      },
+      "oracle": {
+        "model": "anthropic/claude-opus-5",
+        "thinking": "high"
+      }
+    }
+  },
   "warnings": {
     "anthropicExtraUsage": false
   },
