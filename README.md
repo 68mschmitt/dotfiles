@@ -12,6 +12,7 @@ This repository contains configuration files for my development environment, inc
 - **Yabai** - Tiling window manager for macOS
 - **Skhd** - Simple hotkey daemon for macOS keyboard shortcuts
 - **Pi** - Coding agent settings, extensions and prompts
+- **Claude Code** - Global agent settings, statusline and subagents
 - **Scripts** - Utility scripts for wallpaper management, Git setup, and QoL improvements
 - **Plover** - Stenography dictionary
 
@@ -38,7 +39,7 @@ Use GNU Stow to symlink configurations into your home directory:
 ```
 
 This creates symlinks for every top-level package in this repo (`neovim`,
-`tmux`, `ghostty`, `scripts`, `plover`, `pi`), plus the macOS-specific
+`tmux`, `ghostty`, `scripts`, `plover`, `pi`, `claude`), plus the macOS-specific
 packages under `mac/` (`skhd`, `yabai`) when run on macOS. On first run it
 also seeds the wallpaper config (`~/.config/my-wallpapers/`) automatically—
 this one command is the entire setup, no follow-up steps required.
@@ -75,6 +76,13 @@ dotfiles/
 │       │   ├── prompts/         # Prompt templates + assets
 │       │   └── skills/          # Agent skills
 │       └── voice/config.json    # pi-voice TTS settings
+├── claude/                 # Claude Code (global) configuration
+│   └── .claude/
+│       ├── settings.json          # Global agent settings
+│       ├── statusline-command.sh  # Statusline renderer
+│       ├── statusline-usage.sh    # Background usage/credits fetcher
+│       ├── agents/                # Subagent definitions
+│       └── commands/              # Custom slash commands
 ├── scripts/                # Utility scripts
 │   └── .scripts/
 │       ├── wallpaper-scripts/  # Dynamic wallpaper management
@@ -152,6 +160,28 @@ out of the repo (see `.gitignore`):
 After cloning, run `./stow-dots.sh`, then start pi once so it reinstalls the
 declared `packages` and re-authenticates (`/login`).
 
+### Claude Code
+
+Global (`~/.claude`) config only — per-project `.claude/` dirs stay with their
+own repos. `~/.claude` is a *real* directory that Claude Code fills with
+runtime state, so this package deliberately does **not** fold it into a single
+symlink: stow links only the tracked files below and leaves everything else
+alone.
+
+| Tracked | Deliberately untracked |
+| --- | --- |
+| `settings.json` | `projects/`, `sessions/`, `history.jsonl` — transcripts/state |
+| `statusline-command.sh` | `~/.claude.json` — account, per-project history, MCP state |
+| `statusline-usage.sh` | `daemon*`, `jobs/`, `shell-snapshots/` — runtime state |
+| `agents/` — subagent definitions | `cache/`, `*-cache.json`, `policy-limits.json` — caches |
+| `commands/` — custom slash commands | `remote-settings.json`, `settings.local.json` — server/per-machine |
+
+`statusline-usage.sh` pulls the OAuth token from the macOS keychain
+(`Claude Code-credentials`) on each fetch, so no credentials live in the repo,
+but the credits segment of the statusline is macOS-only. After cloning, run
+`./stow-dots.sh` and `claude` will pick up the settings on next launch — the
+only manual step is authenticating (`/login`).
+
 ### Tmux
 
 Terminal multiplexer configuration:
@@ -207,8 +237,9 @@ cp ~/.gitconfig git/.gitconfig
 
 - **GNU Stow**
 - **macOS** for the `mac/` packages (skhd, yabai) and the wallpaper scripts
-  (they use `osascript`); the rest (neovim, tmux, ghostty, pi, plover,
+  (they use `osascript`); the rest (neovim, tmux, ghostty, pi, claude, plover,
   git/qol/fun scripts) is platform-agnostic
+- **jq** for the Claude Code statusline (`claude/.claude/statusline-*.sh`)
 
 ## Maintenance
 

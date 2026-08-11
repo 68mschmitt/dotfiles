@@ -38,6 +38,41 @@ pi/.pi/octo-review/
 pi/.pi/err.txt
 
 # ---------------------------------------------------------------------------
+# Claude Code — machine-local state, caches and transient logs
+# ---------------------------------------------------------------------------
+# ~/.claude is NOT a folded symlink: only the files tracked below are linked,
+# so all of Claude Code's runtime state stays untracked in the real ~/.claude.
+# These rules are belt-and-braces in case anything gets copied in (or --adopt
+# is run) by mistake.
+
+# Conversation transcripts / per-project state (proprietary source, secrets)
+claude/.claude/projects/
+claude/.claude/sessions/
+claude/.claude/session-env/
+claude/.claude/history.jsonl
+claude/.claude/shell-snapshots/
+claude/.claude/file-history/
+claude/.claude/backups/
+claude/.claude/paste-cache/
+
+# Daemon / background job runtime state
+claude/.claude/daemon/
+claude/.claude/daemon.*
+claude/.claude/jobs/
+
+# Caches and rate-limit bookkeeping (regenerated on demand)
+claude/.claude/cache/
+claude/.claude/.usage-cache.json
+claude/.claude/.last-cleanup
+claude/.claude/stats-cache.json
+claude/.claude/policy-limits.json
+claude/.claude/gh-pr-status-cache.json
+
+# Server-pushed settings + per-machine local overrides
+claude/.claude/remote-settings.json
+claude/.claude/settings.local.json
+
+# ---------------------------------------------------------------------------
 # OS cruft
 # ---------------------------------------------------------------------------
 .DS_Store

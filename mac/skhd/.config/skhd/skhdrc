@@ -40,3 +40,8 @@ cmd + shift - right : yabai -m window --resize right:50:0; \
 
 # Equalize Size of Windows
 cmd + shift - e : yabai -m space --balance
+
+# Dictation (FluidAudio) - toggle record / transcribe+paste
+cmd + alt - d : /Users/michael.schmitt/.local/bin/dictate-toggle
+# Dictation - whisper mode (boost quiet speech)
+cmd + alt - w : /Users/michael.schmitt/.local/bin/dictate-toggle -w
