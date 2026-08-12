@@ -1,0 +1,23 @@
+# Prime Agent — never version-control secrets or machine-local state.
+#
+# NOTE: ~/.prime/agent may contain a mix of stowed config files and Prime
+# Agent-managed runtime state. Repo-wide rules also live in the root .gitignore;
+# this file is the belt-and-braces copy that travels with the dir.
+
+# Secrets
+auth.json
+
+# Transient session transcripts / logs
+sessions/
+session-artifacts/
+logs/
+daemon-workers/
+session-leases/
+
+# Machine-local state, caches and generated environments
+telemetry.json
+kernel-venv/
+.openai-usage-cache.json
+.claude-usage-cache.json
+models-store.json
+trust.json

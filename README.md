@@ -12,6 +12,7 @@ This repository contains configuration files for my development environment, inc
 - **Yabai** - Tiling window manager for macOS
 - **Skhd** - Simple hotkey daemon for macOS keyboard shortcuts
 - **Pi** - Coding agent settings, extensions and prompts
+- **Prime Agent** - Agent defaults and status extensions
 - **Claude Code** - Global agent settings, statusline and subagents
 - **Scripts** - Utility scripts for wallpaper management, Git setup, and QoL improvements
 - **Plover** - Stenography dictionary
@@ -39,7 +40,7 @@ Use GNU Stow to symlink configurations into your home directory:
 ```
 
 This creates symlinks for every top-level package in this repo (`neovim`,
-`tmux`, `ghostty`, `scripts`, `plover`, `pi`, `claude`), plus the macOS-specific
+`tmux`, `ghostty`, `scripts`, `plover`, `pi`, `prime`, `claude`), plus the macOS-specific
 packages under `mac/` (`skhd`, `yabai`) when run on macOS. On first run it
 also seeds the wallpaper config (`~/.config/my-wallpapers/`) automatically—
 this one command is the entire setup, no follow-up steps required.
@@ -76,6 +77,10 @@ dotfiles/
 │       │   ├── prompts/         # Prompt templates + assets
 │       │   └── skills/          # Agent skills
 │       └── voice/config.json    # pi-voice TTS settings
+├── prime/                  # Prime Agent configuration
+│   └── .prime/agent/
+│       ├── settings.json          # Core agent settings
+│       └── extensions/            # Custom TS extensions
 ├── claude/                 # Claude Code (global) configuration
 │   └── .claude/
 │       ├── settings.json          # Global agent settings
@@ -159,6 +164,22 @@ out of the repo (see `.gitignore`):
 
 After cloning, run `./stow-dots.sh`, then start pi once so it reinstalls the
 declared `packages` and re-authenticates (`/login`).
+
+### Prime Agent
+
+Only declarative Prime Agent config is tracked. Machine-local state and secrets
+stay out of the repo (see `.gitignore`):
+
+| Tracked | Deliberately untracked |
+| --- | --- |
+| `agent/settings.json` | `agent/auth.json` — **API credentials** |
+| `agent/extensions/` | `agent/sessions/`, `agent/session-artifacts/` — transcripts/kernel state |
+| | `agent/logs/`, `agent/daemon-workers/`, `agent/session-leases/` — runtime state |
+| | `agent/kernel-venv/` — generated Python environment |
+| | `agent/telemetry.json`, `agent/.openai-usage-cache.json` — machine-local IDs/caches |
+
+After cloning, run `./stow-dots.sh`, then start Prime Agent and authenticate
+(`/login`).
 
 ### Claude Code
 

@@ -38,6 +38,29 @@ pi/.pi/octo-review/
 pi/.pi/err.txt
 
 # ---------------------------------------------------------------------------
+# Prime Agent — machine-local state, caches and transient logs
+# ---------------------------------------------------------------------------
+# Credentials (also covered by the global **/auth.json rule above)
+prime/.prime/agent/auth.json
+
+# Conversation transcripts and kernel/session artifacts
+prime/.prime/agent/sessions/
+prime/.prime/agent/session-artifacts/
+
+# Daemon/background worker runtime state and logs
+prime/.prime/agent/daemon-workers/
+prime/.prime/agent/session-leases/
+prime/.prime/agent/logs/
+
+# Generated Python environment and machine-local caches/IDs
+prime/.prime/agent/kernel-venv/
+prime/.prime/agent/telemetry.json
+prime/.prime/agent/.openai-usage-cache.json
+prime/.prime/agent/.claude-usage-cache.json
+prime/.prime/agent/models-store.json
+prime/.prime/agent/trust.json
+
+# ---------------------------------------------------------------------------
 # Claude Code — machine-local state, caches and transient logs
 # ---------------------------------------------------------------------------
 # ~/.claude is NOT a folded symlink: only the files tracked below are linked,

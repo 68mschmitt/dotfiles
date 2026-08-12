@@ -1,0 +1,13 @@
+{
+  "telemetry": {
+    "noticeShown": true
+  },
+  "onboardingShown": true,
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.5",
+  "recentModels": [
+    "openai-codex/gpt-5.5"
+  ],
+  "defaultThinkingLevel": "xhigh",
+  "hideThinkingBlock": true
+}
