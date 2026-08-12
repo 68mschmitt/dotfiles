@@ -3,11 +3,24 @@
     "defaultMode": "default"
   },
   "model": "opus[1m]",
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
   "enableWorkflows": false,
   "workflowKeywordTriggerEnabled": false,
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"
+  },
+  "extraKnownMarketplaces": {
+    "i-have-adhd": {
+      "source": {
+        "source": "github",
+        "repo": "michael-a-schmitt/i-have-adhd"
+      }
+    }
   },
   "effortLevel": "high",
   "promptSuggestionEnabled": false,
@@ -16,7 +29,7 @@
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
   "editorMode": "normal",
-  "verbose": true,
+  "verbose": false,
   "autoCompactEnabled": false,
   "switchModelsOnFlag": false,
   "useAutoModeDuringPlan": true
