@@ -80,7 +80,8 @@ dotfiles/
 ├── prime/                  # Prime Agent configuration
 │   └── .prime/agent/
 │       ├── settings.json          # Core agent settings
-│       └── extensions/            # Custom TS extensions
+│       ├── extensions/            # Custom TS extensions
+│       └── harness/               # Continual harness config
 ├── claude/                 # Claude Code (global) configuration
 │   └── .claude/
 │       ├── settings.json          # Global agent settings
@@ -174,7 +175,7 @@ stay out of the repo (see `.gitignore`):
 | --- | --- |
 | `agent/settings.json` | `agent/auth.json` — **API credentials** |
 | `agent/extensions/` | `agent/sessions/`, `agent/session-artifacts/` — transcripts/kernel state |
-| | `agent/logs/`, `agent/daemon-workers/`, `agent/session-leases/` — runtime state |
+| `agent/harness/` | `agent/logs/`, `agent/daemon-workers/`, `agent/session-leases/` — runtime state |
 | | `agent/kernel-venv/` — generated Python environment |
 | | `agent/telemetry.json`, `agent/.openai-usage-cache.json` — machine-local IDs/caches |
 

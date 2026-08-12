@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "entries": {
+    "prompt": {
+      "prefer_subagents_for_token_heavy_work": {
+        "id": "prefer_subagents_for_token_heavy_work",
+        "kind": "prompt",
+        "title": "Prefer subagents for token-heavy work",
+        "content": "Keep the root session compact by delegating aggressively. For any task with independent or context-heavy work—repo/file exploration, web/background research, log/test triage, API/docs review, multiple implementation options, or parallel review—spawn one or more subagents early instead of loading all context in the parent. Give each child a narrow prompt, ask for a concise reply or artifact path, and let the parent orchestrate, decide, perform minimal edits, and answer. If two or more independent investigations are plausible, prefer subagents by default. Avoid reading large files/logs/pages in the parent when a child can summarize exact findings. Delete direct children when no longer needed.",
+        "path": "policy/delegation",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "reason": "User requested lower per-session token usage via more frequent sub-agent delegation."
+        },
+        "source": "agent",
+        "created_at": "2026-08-12T22:29:25.356366+00:00",
+        "updated_at": "2026-08-12T22:29:25.356372+00:00",
+        "version": 1
+      }
+    },
+    "memory": {},
+    "skill": {},
+    "subagent": {}
+  },
+  "refinements": [
+    {
+      "id": "refine_0001",
+      "trigger": "User reported high token usage per session and asked to steer Prime Agent toward sub-agent use.",
+      "changes": [
+        "Added global prompt note prefer_subagents_for_token_heavy_work under policy/delegation."
+      ],
+      "evidence": "Global harness had no existing delegation prompt notes; created a compact policy directing early subagent delegation for context-heavy or independent work.",
+      "outcome": "Future sessions should delegate more repo/web/log/review work to subagents and keep the parent session compact.",
+      "created_at": "2026-08-12T22:29:34.959677+00:00"
+    }
+  ]
+}
