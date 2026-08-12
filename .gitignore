@@ -22,6 +22,7 @@ pi/.pi/agent/trust.json
 # Provider/model catalog + usage caches (regenerated on demand)
 pi/.pi/agent/models-store.json
 pi/.pi/agent/.claude-usage-cache.json
+pi/.pi/agent/.openai-usage-cache.json
 
 # pi-managed npm package installs (declared in settings.json "packages")
 pi/.pi/agent/npm/

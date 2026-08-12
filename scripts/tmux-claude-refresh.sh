@@ -1,27 +1,37 @@
 #!/usr/bin/env bash
-# Background refresh trigger for Claude usage in tmux
-# This is called periodically by tmux to kick off a background fetch.
-# It respects the rate-limiting built into ~/.claude/statusline-usage.sh
+# Background refresh trigger for Claude usage in tmux.
+# Calls ~/.claude/statusline-usage.sh only when this host has Claude auth and
+# the cache is missing/stale. The usage script performs the actual API request
+# and owns its own 429 backoff/single-flight lock.
 
 set -uo pipefail
 
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=tmux-usage-lib.sh
+. "$SCRIPT_DIR/tmux-usage-lib.sh"
+
 USAGE_REFRESH="$HOME/.claude/statusline-usage.sh"
 USAGE_CACHE="$HOME/.claude/.usage-cache.json"
+STALE_MS=300000
 
-# Only run the refresh if the script exists
 [ -x "$USAGE_REFRESH" ] || exit 0
+tmux_usage_has_claude_auth || exit 0
 
-# Check cache age: refresh if older than 60 seconds
-cache_age=0
+now_ms=$(tmux_usage_now_ms)
+cache_ts=0
+cooldown_until=0
+usage_text=""
 if [ -f "$USAGE_CACHE" ]; then
-  cache_ts=$(jq -r '.ts // 0' "$USAGE_CACHE" 2>/dev/null | awk '{print int($1/1000)}')
-  now=$(date +%s)
-  cache_age=$((now - cache_ts))
+  IFS=$'\t' read -r cache_ts cooldown_until usage_text < <(
+    jq -r '[.ts // 0, .cooldownUntil // 0, .text // ""] | @tsv' "$USAGE_CACHE" 2>/dev/null || printf '0\t0\t\n'
+  )
 fi
+cache_ts=$(tmux_usage_to_ms "$cache_ts")
+cooldown_until=$(tmux_usage_to_ms "$cooldown_until")
 
-# Only run refresh if cache is older than 60 seconds
-# (the script itself enforces min 1 minute intervals + 429 backoff)
-if [ "$cache_age" -gt 60 ]; then
+[ "$now_ms" -ge "$cooldown_until" ] 2>/dev/null || exit 0
+
+if [ ! -f "$USAGE_CACHE" ] || [ -z "$usage_text" ] || [ $((now_ms - cache_ts)) -ge "$STALE_MS" ]; then
   (nohup "$USAGE_REFRESH" >/dev/null 2>&1 &) >/dev/null 2>&1
 fi
 

@@ -16,4 +16,5 @@ powerline-footer/inbox.jsonl
 trust.json
 models-store.json
 .claude-usage-cache.json
+.openai-usage-cache.json
 npm/

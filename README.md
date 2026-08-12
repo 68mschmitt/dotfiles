@@ -158,7 +158,7 @@ out of the repo (see `.gitignore`):
 | `agent/settings.json` | `agent/auth.json` — **API credentials** |
 | `agent/agents/`, `extensions/`, `prompts/`, `skills/` | `agent/sessions/`, `run-history.jsonl` — transcripts/logs |
 | `voice/config.json` | `agent/trust.json` — per-machine trust decisions |
-| | `agent/models-store.json`, `.claude-usage-cache.json` — caches |
+| | `agent/models-store.json`, `.claude-usage-cache.json`, `.openai-usage-cache.json` — caches |
 | | `agent/npm/` — pi-managed installs of `settings.json` `packages` |
 | | `voice/cache/`, `voice/manifest.json` — ~800MB TTS model weights |
 | | `octo-review/` — review history + blind-spot profile (self-healing) |
@@ -210,7 +210,7 @@ Terminal multiplexer configuration:
 - `C-Space` prefix (instead of C-b)
 - Vi mode keybindings
 - Minimal status theme
-- TPM plugin manager
+- Claude/OpenAI usage segments that render only when host auth is present
 - Image support for Neovim
 
 ## Scripts
