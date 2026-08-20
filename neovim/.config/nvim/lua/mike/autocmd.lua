@@ -2,6 +2,14 @@ local autocmd = vim.api.nvim_create_autocmd
 
 local group = vim.api.nvim_create_augroup("MikeAuGroup", { clear = true })
 
+autocmd({ "BufEnter", "CursorHold", "CursorHoldI", "FocusGained" }, {
+    desc = "Reload buffers changed outside of Nvim",
+    group = group,
+    callback = function()
+        vim.cmd("checktime")
+    end,
+})
+
 autocmd('TextYankPost', {
     desc = 'Highlight when yanking (copying) text',
     group = group,
@@ -28,6 +36,8 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
     pattern = "*.vil",
     command = "set filetype=json",
 })
+
+vim.filetype.add({ extension = { jsonl = "json" } })
 
 local keymap_setup = function(_, bufnr)
     local opts = function(desc)
