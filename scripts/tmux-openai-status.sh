@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Tmux status line component for OpenAI Codex usage.
-# Displays nothing unless host-local pi auth has an OpenAI Codex OAuth credential.
+# Tmux status line component for OpenAI usage.
+# Displays nothing unless host-local OpenAI OAuth credentials are available.
 
 set -uo pipefail
 
@@ -20,21 +20,41 @@ fi
 
 usage_text=""
 if [ -f "$CACHE" ]; then
-  remaining=""
-  reset_at=""
-  IFS=$'\t' read -r remaining reset_at < <(
-    jq -r '[.meter.remainingPercent // empty, .meter.resetAtMs // empty] | @tsv' "$CACHE" 2>/dev/null || true
+  primary_remaining=""
+  primary_reset_at=""
+  weekly_remaining=""
+  weekly_reset_at=""
+  IFS=$'\t' read -r primary_remaining primary_reset_at weekly_remaining weekly_reset_at < <(
+    jq -r '[.meters.primary.remainingPercent // "", .meters.primary.resetAtMs // "", .meters.weekly.remainingPercent // "", .meters.weekly.resetAtMs // ""] | @tsv' "$CACHE" 2>/dev/null || true
   )
 
-  if [ -n "$remaining" ]; then
-    pct=$(awk -v n="$remaining" 'BEGIN { if (n < 0) n = 0; if (n > 100) n = 100; printf "%.0f", n }')
-    usage_text="${pct}%"
-    reset_at=$(tmux_usage_to_ms "$reset_at")
-    if [ "$reset_at" -gt 0 ] 2>/dev/null; then
+  if [ -n "$primary_remaining" ]; then
+    primary_pct=$(awk -v n="$primary_remaining" 'BEGIN { if (n < 0) n = 0; if (n > 100) n = 100; printf "%.0f", n }')
+    primary_text="${primary_pct}%"
+    primary_reset_at=$(tmux_usage_to_ms "$primary_reset_at")
+    if [ "$primary_reset_at" -gt 0 ] 2>/dev/null; then
       now_ms=$(tmux_usage_now_ms)
-      seconds=$(((reset_at - now_ms + 999) / 1000))
+      seconds=$(((primary_reset_at - now_ms + 999) / 1000))
       if [ "$seconds" -lt 0 ]; then seconds=0; fi
-      usage_text="$usage_text $(tmux_usage_format_duration "$seconds")"
+      primary_text="$primary_text $(tmux_usage_format_duration "$seconds")"
+    fi
+    usage_text="$primary_text"
+  fi
+
+  if [ -n "$weekly_remaining" ]; then
+    weekly_pct=$(awk -v n="$weekly_remaining" 'BEGIN { if (n < 0) n = 0; if (n > 100) n = 100; printf "%.0f", n }')
+    weekly_text="${weekly_pct}%"
+    weekly_reset_at=$(tmux_usage_to_ms "$weekly_reset_at")
+    if [ "$weekly_reset_at" -gt 0 ] 2>/dev/null; then
+      now_ms=$(tmux_usage_now_ms)
+      seconds=$(((weekly_reset_at - now_ms + 999) / 1000))
+      if [ "$seconds" -lt 0 ]; then seconds=0; fi
+      weekly_text="$weekly_text $(tmux_usage_format_duration "$seconds")"
+    fi
+    if [ -n "$usage_text" ]; then
+      usage_text="$usage_text | $weekly_text"
+    else
+      usage_text="$weekly_text"
     fi
   fi
 fi

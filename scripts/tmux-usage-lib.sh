@@ -77,16 +77,30 @@ tmux_usage_pi_agent_dir() {
   printf '%s\n' "${PI_AGENT_DIR:-$HOME/.pi/agent}"
 }
 
+tmux_usage_opencode_data_dir() {
+  printf '%s\n' "${OPENCODE_DATA_DIR:-$HOME/.local/share/opencode}"
+}
+
 tmux_usage_openai_auth_path() {
-  if [ -n "${PI_AUTH_PATH:-}" ]; then
+  if [ -n "${OPENAI_AUTH_PATH:-}" ]; then
+    printf '%s\n' "$OPENAI_AUTH_PATH"
+  elif [ -n "${PI_AUTH_PATH:-}" ]; then
     printf '%s\n' "$PI_AUTH_PATH"
+  elif [ -f "$(tmux_usage_opencode_data_dir)/auth.json" ]; then
+    printf '%s/auth.json\n' "$(tmux_usage_opencode_data_dir)"
   else
     printf '%s/auth.json\n' "$(tmux_usage_pi_agent_dir)"
   fi
 }
 
 tmux_usage_openai_cache_path() {
-  printf '%s/.openai-usage-cache.json\n' "$(tmux_usage_pi_agent_dir)"
+  if [ -n "${OPENAI_USAGE_CACHE_PATH:-}" ]; then
+    printf '%s\n' "$OPENAI_USAGE_CACHE_PATH"
+  elif [ "$(tmux_usage_openai_auth_path)" = "$(tmux_usage_opencode_data_dir)/auth.json" ]; then
+    printf '%s/.openai-usage-cache.json\n' "$(tmux_usage_opencode_data_dir)"
+  else
+    printf '%s/.openai-usage-cache.json\n' "$(tmux_usage_pi_agent_dir)"
+  fi
 }
 
 tmux_usage_read_openai_credential() {
@@ -96,7 +110,7 @@ tmux_usage_read_openai_credential() {
   auth_path=$(tmux_usage_openai_auth_path)
   [ -f "$auth_path" ] || return 1
 
-  jq -r --arg provider "openai-codex" --arg claim "https://api.openai.com/auth" '
+  jq -r --arg claim "https://api.openai.com/auth" '
     def b64url_decode:
       . as $s
       | ($s + (["", "===", "==", "="][($s | length) % 4]))
@@ -109,7 +123,7 @@ tmux_usage_read_openai_credential() {
         | .[$claim].chatgpt_account_id
       ) catch null;
 
-    .[$provider] as $a
+    (.openai // .["openai-codex"]) as $a
     | if ($a.type == "oauth" and ($a.access | type) == "string" and ($a.access | length) > 0) then
         ($a.accountId // account_id_from_token($a.access) // "") as $accountId
         | if (($accountId | type) == "string" and ($accountId | length) > 0) then
@@ -126,5 +140,5 @@ tmux_usage_has_openai_auth() {
 }
 
 tmux_usage_user_agent() {
-  printf 'pi (%s %s; %s)\n' "$(uname -s)" "$(uname -r)" "$(uname -m)"
+  printf '%s (%s %s; %s)\n' "${OPENAI_ORIGINATOR:-opencode}" "$(uname -s)" "$(uname -r)" "$(uname -m)"
 }

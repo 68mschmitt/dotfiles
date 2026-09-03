@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Background refresh trigger/client for OpenAI Codex usage in tmux.
-# Mirrors pi/.pi/agent/extensions/openai-usage.ts, but writes a host-local cache
-# that tmux can read without doing network I/O in the status render path.
+# Background refresh trigger/client for OpenAI usage in tmux.
+# Writes a host-local cache that tmux can read without doing network I/O in the
+# status render path.
 
 set -uo pipefail
 
@@ -29,26 +29,33 @@ now_ms=$(tmux_usage_now_ms)
 now_s=$((now_ms / 1000))
 last_ts=0
 cooldown_until=0
-has_meter=0
-reset_at=0
+has_meters=0
+primary_reset_at=0
+weekly_reset_at=0
 if [ -f "$CACHE" ]; then
-  IFS=$'\t' read -r last_ts cooldown_until has_meter reset_at < <(
-    jq -r '[.ts // 0, .cooldownUntil // 0, (if .meter.remainingPercent? == null then 0 else 1 end), .meter.resetAtMs // 0] | @tsv' "$CACHE" 2>/dev/null || printf '0\t0\t0\t0\n'
+  IFS=$'\t' read -r last_ts cooldown_until has_meters primary_reset_at weekly_reset_at < <(
+    jq -r '[.ts // 0, .cooldownUntil // 0,
+      (if (.meters.primary.remainingPercent? != null and .meters.weekly.remainingPercent? != null) then 1 else 0 end),
+      .meters.primary.resetAtMs // 0, .meters.weekly.resetAtMs // 0] | @tsv' "$CACHE" 2>/dev/null || printf '0\t0\t0\t0\t0\n'
   )
 fi
 last_ts=$(tmux_usage_to_ms "$last_ts")
 cooldown_until=$(tmux_usage_to_ms "$cooldown_until")
-reset_at=$(tmux_usage_to_ms "$reset_at")
+primary_reset_at=$(tmux_usage_to_ms "$primary_reset_at")
+weekly_reset_at=$(tmux_usage_to_ms "$weekly_reset_at")
 
 [ "$now_ms" -ge "$cooldown_until" ] 2>/dev/null || exit 0
 
 age=$((now_ms - last_ts))
 reset_passed=0
-if [ "$has_meter" = "1" ] && [ "$reset_at" -gt 0 ] && [ "$now_ms" -ge "$reset_at" ]; then
+if [ "$has_meters" = "1" ] && {
+  { [ "$primary_reset_at" -gt 0 ] && [ "$now_ms" -ge "$primary_reset_at" ]; } ||
+  { [ "$weekly_reset_at" -gt 0 ] && [ "$now_ms" -ge "$weekly_reset_at" ]; }
+}; then
   reset_passed=1
 fi
 
-if [ "$has_meter" = "1" ] && [ "$reset_passed" = "0" ] && [ "$age" -lt "$STALE_MS" ]; then
+if [ "$has_meters" = "1" ] && [ "$reset_passed" = "0" ] && [ "$age" -lt "$STALE_MS" ]; then
   exit 0
 fi
 if [ "$age" -lt "$MIN_INTERVAL_MS" ]; then
@@ -67,7 +74,7 @@ trap 'rm -rf "$LOCK"' EXIT
 response=$(curl -s --max-time "$FETCH_TIMEOUT" -w '\n%{http_code}' "$USAGE_URL" \
   -H "Authorization: Bearer $token" \
   -H "chatgpt-account-id: $account_id" \
-  -H "originator: pi" \
+  -H "originator: ${OPENAI_ORIGINATOR:-opencode}" \
   -H "User-Agent: $(tmux_usage_user_agent)" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" 2>/dev/null)
@@ -133,23 +140,14 @@ meter=$(printf '%s' "$body" | jq -c --argjson now "$now_ms" '
 
   (.rate_limit // .rate_limits // .) as $r
   | [
-      $r.primary_window,
-      $r.secondary_window,
-      $r.primary,
-      $r.secondary,
-      $r.five_hour,
-      $r.five_hour_limit,
-      $r.five_hour_rate_limit,
-      $r.weekly,
-      $r.weekly_limit,
-      $r.weekly_rate_limit
+      ["primary", ($r.primary_window // $r.primary | window)],
+      ["weekly", ($r.secondary_window // $r.weekly | window)]
     ]
-  | map(window)
-  | if length == 0 then empty
-    else sort_by(.remainingPercent, (.resetAtMs // 9999999999999999)) | .[0]
-    end
+  | map(select(.[1] != null))
+  | map({key: .[0], value: .[1]})
+  | if length == 0 then empty else from_entries end
 ' 2>/dev/null)
 
 [ -n "$meter" ] || exit 0
-next_cache=$(jq -n -c --argjson ts "$now_ms" --argjson meter "$meter" '{ts: $ts, cooldownUntil: 0, meter: $meter}')
+next_cache=$(jq -n -c --argjson ts "$now_ms" --argjson meters "$meter" '{ts: $ts, cooldownUntil: 0, meters: $meters}')
 write_json "$next_cache"
