@@ -104,4 +104,4 @@ claude/.claude/settings.local.json
 # ---------------------------------------------------------------------------
 # Neovim
 # ---------------------------------------------------------------------------
-./neovim/.config/nvim/lazy-lock.json
+neovim/.config/nvim/lazy-lock.json
