@@ -24,8 +24,9 @@ if [ -f "$CACHE" ]; then
   primary_reset_at=""
   weekly_remaining=""
   weekly_reset_at=""
-  IFS=$'\t' read -r primary_remaining primary_reset_at weekly_remaining weekly_reset_at < <(
-    jq -r '[.meters.primary.remainingPercent // "", .meters.primary.resetAtMs // "", .meters.weekly.remainingPercent // "", .meters.weekly.resetAtMs // ""] | @tsv' "$CACHE" 2>/dev/null || true
+  last_refresh=0
+  IFS=$'\t' read -r last_refresh primary_remaining primary_reset_at weekly_remaining weekly_reset_at < <(
+    jq -r '[.ts // 0, .meters.primary.remainingPercent // "", .meters.primary.resetAtMs // "", .meters.weekly.remainingPercent // "", .meters.weekly.resetAtMs // ""] | @tsv' "$CACHE" 2>/dev/null || true
   )
 
   if [ -n "$primary_remaining" ]; then
@@ -56,6 +57,13 @@ if [ -f "$CACHE" ]; then
     else
       usage_text="$weekly_text"
     fi
+  fi
+
+  last_refresh=$(tmux_usage_to_ms "$last_refresh")
+  if [ -n "$usage_text" ] && [ "$last_refresh" -gt 0 ]; then
+    age_minutes=$((($(tmux_usage_now_ms) - last_refresh) / 60000))
+    if [ "$age_minutes" -lt 0 ]; then age_minutes=0; fi
+    usage_text="${age_minutes}m | $usage_text"
   fi
 fi
 
