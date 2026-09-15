@@ -4,6 +4,11 @@
 
 # shellcheck shell=bash
 
+TMUX_USAGE_LIB_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+# How stale a cached metric may get before a background refresh is triggered.
+TMUX_USAGE_DEFAULT_REFRESH_SECONDS=120
+
 tmux_usage_have_jq() {
   command -v jq >/dev/null 2>&1
 }
@@ -61,6 +66,98 @@ tmux_usage_format_duration() {
   else
     printf '%sd' "$days"
   fi
+}
+
+# Candidate config files, in precedence order. A config file is an optional
+# shell fragment that sets any of the TMUX_USAGE_*_REFRESH_SECONDS knobs.
+tmux_usage_config_paths() {
+  if [ -n "${TMUX_USAGE_CONFIG:-}" ]; then
+    printf '%s\n' "$TMUX_USAGE_CONFIG"
+    return 0
+  fi
+  printf '%s/tmux-usage/config\n' "${XDG_CONFIG_HOME:-$HOME/.config}"
+  printf '%s/tmux-usage.conf\n' "$TMUX_USAGE_LIB_DIR"
+}
+
+# Source the first config file that exists. Environment variables always win,
+# so a config file cannot override an explicit env setting (handy for testing
+# and for one-off overrides in a single shell).
+tmux_usage_load_config() {
+  [ -z "${_tmux_usage_config_loaded:-}" ] || return 0
+  _tmux_usage_config_loaded=1
+
+  local env_shared="${TMUX_USAGE_REFRESH_SECONDS:-}"
+  local env_claude="${TMUX_USAGE_CLAUDE_REFRESH_SECONDS:-}"
+  local env_openai="${TMUX_USAGE_OPENAI_REFRESH_SECONDS:-}"
+
+  local candidate
+  while IFS= read -r candidate; do
+    [ -n "$candidate" ] && [ -f "$candidate" ] || continue
+    # shellcheck disable=SC1090
+    . "$candidate" 2>/dev/null || true
+    break
+  done < <(tmux_usage_config_paths)
+
+  [ -z "$env_shared" ] || TMUX_USAGE_REFRESH_SECONDS="$env_shared"
+  [ -z "$env_claude" ] || TMUX_USAGE_CLAUDE_REFRESH_SECONDS="$env_claude"
+  [ -z "$env_openai" ] || TMUX_USAGE_OPENAI_REFRESH_SECONDS="$env_openai"
+  return 0
+}
+
+# Resolve the refresh interval in seconds for a provider ("claude"|"openai").
+# Precedence: provider-specific setting, shared setting, built-in default.
+# Non-numeric or non-positive values fall back to the default rather than
+# disabling refresh or hammering the API.
+tmux_usage_refresh_seconds() {
+  local provider="${1:-}" value=""
+  tmux_usage_load_config
+
+  case "$provider" in
+    claude) value="${TMUX_USAGE_CLAUDE_REFRESH_SECONDS:-}" ;;
+    openai) value="${TMUX_USAGE_OPENAI_REFRESH_SECONDS:-}" ;;
+  esac
+  [ -n "$value" ] || value="${TMUX_USAGE_REFRESH_SECONDS:-}"
+
+  if ! tmux_usage_is_uint "$value" || [ "$value" -le 0 ]; then
+    value="$TMUX_USAGE_DEFAULT_REFRESH_SECONDS"
+  fi
+  printf '%s\n' "$value"
+}
+
+tmux_usage_refresh_ms() {
+  printf '%s000\n' "$(tmux_usage_refresh_seconds "${1:-}")"
+}
+
+# Render the age of a cache timestamp for the status line:
+#   < 1 minute : seconds in 5-second steps  -> "0s", "5s", ... "55s"
+#   < 1 hour   : whole minutes              -> "1m", "2m", ... "59m"
+#   >= 1 hour  : hours and minutes          -> "1h00m", "2h05m", "27h13m"
+# Every step rounds down, so the value never overstates freshness.
+# Accepts epoch seconds or milliseconds. Returns non-zero (and prints nothing)
+# when the timestamp is missing or unusable so callers can omit the segment.
+tmux_usage_format_age() {
+  local ts_ms
+  ts_ms=$(tmux_usage_to_ms "${1:-0}")
+  tmux_usage_is_uint "$ts_ms" || return 1
+  [ "$ts_ms" -gt 0 ] || return 1
+
+  local now_ms seconds minutes
+  now_ms=$(tmux_usage_now_ms)
+  seconds=$(((now_ms - ts_ms) / 1000))
+  if [ "$seconds" -lt 0 ]; then seconds=0; fi
+
+  if [ "$seconds" -lt 60 ]; then
+    printf '%ss' "$((seconds / 5 * 5))"
+    return 0
+  fi
+
+  minutes=$((seconds / 60))
+  if [ "$minutes" -lt 60 ]; then
+    printf '%sm' "$minutes"
+    return 0
+  fi
+
+  printf '%sh%02dm' "$((minutes / 60))" "$((minutes % 60))"
 }
 
 tmux_usage_has_claude_auth() {

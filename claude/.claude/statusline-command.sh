@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Claude Code status line - styled after Oh My Zsh "robbyrussell" theme
-# Format: <arrow+cwd (robbyrussell style)> <git branch/status> | <model> | <context> | <credits>
+# Format: <arrow+cwd (robbyrussell style)> <git branch/status> | <model> | <context>
 
 input=$(cat)
 
@@ -28,8 +28,6 @@ RED=$'\033[31m'
 YELLOW=$'\033[33m'
 DIM=$'\033[2m'
 RESET=$'\033[0m'
-C_WARN=$'\033[38;2;254;188;56m'  # #febc38 amber
-C_CRIT=$'\033[38;2;215;95;95m'   # #d75f5f red
 
 # --- robbyrussell-style prompt: arrow + cwd ---
 dir_name=$(basename "$cwd")
@@ -65,38 +63,4 @@ if [ -n "$window_size" ] && [ "$window_size" -gt 0 ] 2>/dev/null; then
   context_segment=$(printf " %s|%s %s%s/%s (%.0f%%)%s" "$DIM" "$RESET" "$DIM" "$used_str" "$total_str" "${used_pct:-0}" "$RESET")
 fi
 
-# --- usage credits: credits $363.70/$750 (48%) ---
-# Read the disk cache written by statusline-usage.sh, then kick off a detached
-# background refresh when the value is stale (the endpoint rate-limits hard, so
-# never fetch inline and never more than once a minute).
-usage_cache="$HOME/.claude/.usage-cache.json"
-usage_refresh="$HOME/.claude/statusline-usage.sh"
-MIN_INTERVAL=60      # never hit the network more than once/min
-STALE=300            # refetch only if the cached value is older than this
-
-usage_text=""
-usage_ts=0
-usage_cooldown=0
-if [ -f "$usage_cache" ]; then
-  eval "$(jq -r '@sh "usage_text=\(.text // "") usage_ts=\(.ts // 0) usage_cooldown=\(.cooldownUntil // 0)"' "$usage_cache" 2>/dev/null)"
-fi
-
-now=$(date +%s)
-if [ $((now - usage_ts)) -ge "$MIN_INTERVAL" ] && [ "$now" -ge "$usage_cooldown" ] &&
-   { [ -z "$usage_text" ] || [ $((now - usage_ts)) -ge "$STALE" ]; } && [ -x "$usage_refresh" ]; then
-  (nohup "$usage_refresh" >/dev/null 2>&1 &) >/dev/null 2>&1
-fi
-
-usage_segment=""
-if [ -n "$usage_text" ]; then
-  usage_pct=$(printf '%s' "$usage_text" | sed -n 's/.*(\([0-9]*\)%).*/\1/p')
-  usage_color="$DIM"
-  if [ -n "$usage_pct" ]; then
-    if [ "$usage_pct" -ge 80 ]; then usage_color="$C_CRIT"
-    elif [ "$usage_pct" -ge 50 ]; then usage_color="$C_WARN"
-    fi
-  fi
-  usage_segment=$(printf " %s|%s %s%s%s" "$DIM" "$RESET" "$usage_color" "$usage_text" "$RESET")
-fi
-
-printf "%s%s%s%s%s\n" "$prompt" "$git_segment" "$model_segment" "$context_segment" "$usage_segment"
+printf "%s%s%s%s\n" "$prompt" "$git_segment" "$model_segment" "$context_segment"

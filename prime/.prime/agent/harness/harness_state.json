@@ -6,22 +6,269 @@
         "id": "prefer_subagents_for_token_heavy_work",
         "kind": "prompt",
         "title": "Prefer subagents for token-heavy work",
-        "content": "Keep the root session compact by delegating aggressively. For any task with independent or context-heavy work—repo/file exploration, web/background research, log/test triage, API/docs review, multiple implementation options, or parallel review—spawn one or more subagents early instead of loading all context in the parent. Give each child a narrow prompt, ask for a concise reply or artifact path, and let the parent orchestrate, decide, perform minimal edits, and answer. If two or more independent investigations are plausible, prefer subagents by default. Avoid reading large files/logs/pages in the parent when a child can summarize exact findings. Delete direct children when no longer needed.",
+        "content": "Keep the root session compact by delegating aggressively. For any task with independent or context-heavy work—repo/file exploration, web/background research, log/test triage, API/docs review, multiple implementation options, or parallel review—spawn one or more subagents early instead of loading all context in the parent. Give each child a narrow prompt, ask for a concise reply or artifact path, and let the parent orchestrate, decide, perform minimal edits, and answer. If two or more independent investigations are plausible, prefer subagents by default. Avoid reading large files/logs/pages in the parent when a child can summarize exact findings. Delete direct children when no longer needed. Spawn every child with an explicit `model=` selector chosen for that task per the subagent_model_and_effort_routing note - tier 1 (`anthropic/claude-haiku-4-5`) is the default for read/search/summarize work; inheriting the parent model is a deliberate tier-3 choice, not the fallback.",
         "path": "policy/delegation",
         "scope": "global",
         "reference": {},
         "arguments": {},
         "metadata": {
-          "reason": "User requested lower per-session token usage via more frequent sub-agent delegation."
+          "reason": "User requested lower per-session token usage via more frequent sub-agent delegation.",
+          "pairs_with": "subagent_model_and_effort_routing"
         },
         "source": "agent",
         "created_at": "2026-08-12T22:29:25.356366+00:00",
-        "updated_at": "2026-08-12T22:29:25.356372+00:00",
+        "updated_at": "2026-08-13T15:45:27.999454+00:00",
+        "version": 2
+      },
+      "subagent_model_and_effort_routing": {
+        "id": "subagent_model_and_effort_routing",
+        "kind": "prompt",
+        "title": "Dynamic model and effort selection for sub-agent spawns",
+        "content": "Pick the child model per task. Never default a sub-agent to the strongest model at max effort.\n\n`model` is the only capability knob on a spawn: `await rlm(prompt, name=..., model=\"provider/id\")`. Only `name` and `model` are accepted (no per-child thinking/effort kwarg), the selector must be an exact `provider/id` from the authenticated catalog, and there is no silent fallback. Omitting `model` inherits the parent model AND the parent thinking level, so omission is the expensive choice, not the neutral one.\n\nDefault ladder - start at the cheapest tier that can plausibly succeed, escalate only on demonstrated failure (costs are $/Mtok in, $/Mtok out from the built-in Anthropic catalog; re-check ids with `await rlm.find_models(query, limit<=20)` before relying on them):\n- Tier 1, the default for delegated work: `anthropic/claude-haiku-4-5` (1/5). Repo and file greps/reads, log and test-output triage, fetch-and-summarize of docs or URLs, data/field extraction, mechanical refactors, lint/format fixes, boilerplate scaffolding, single-question lookups, artifact collection.\n- Tier 2: `anthropic/claude-sonnet-5` (2/10 - cheaper and newer than `claude-sonnet-4-5` at 3/15). Multi-file implementation, targeted debugging with a known reproduction, review of a bounded diff, test authoring, synthesis across several sources.\n- Tier 3, only for genuine reasoning depth: `anthropic/claude-opus-4-5` (5/25) or inherit the parent model. Novel design and architecture trade-offs, cross-system root-cause analysis without a reproduction, subtle concurrency/security/correctness reasoning, high-stakes irreversible changes.\n- Do not route children to `anthropic/claude-fable-5` (10/50) unless the user asked for creative long-form writing.\n\nEffort discipline (effort cannot be passed per child, so buy it in the prompt, not in the model tier):\n- Give tier-1/2 children an explicit scope bound: the exact paths or URLs to touch, \"single pass, no exploratory fan-out\", a tool-call ceiling, the acceptance criterion, and the required reply shape (\"<=20 lines\" or \"write findings to <path> and reply with the path\").\n- Bound a cheap child tightly before considering a stronger one. An underspecified opus child is a worse buy than a well-specified haiku child.\n- Escalate instead of pre-empting: if a cheap child returns a wrong, empty, or unverifiable result, re-spawn the same task one tier up and attach the earlier findings. Two haiku children plus one sonnet retry usually beats one opus child on cost and latency.\n- Fan out breadth on tier 1; keep judgment, final decisions, and edits in the parent.\n- Name the chosen model and a one-line reason when spawning, so the routing decision is auditable and correctable.\n\nPersistent effort clamp (optional, config-level): `~/.prime/agent/models.json` accepts `providers.<provider>.modelOverrides.<model-id>` with `reasoning: false` to disable extended thinking for that model id, or `thinkingLevelMap` to remap/clamp levels (`off|minimal|low|medium|high|xhigh|max` -> provider value, `null` = unsupported and clamped away). Built-in models keep existing OAuth auth when overridden. Anthropic adaptive-thinking models (opus-4.6+, sonnet-4.6, sonnet-5, fable-5) take effort strings; older ids (haiku-4-5, sonnet-4-5, opus-4-5) are token-budget based via `thinkingBudgets`. Probe any clamp before relying on it.",
+        "path": "policy/delegation",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "sub-agent spawns",
+          "verified_against": "prime-agent dist core/agent-session.js, core/model-registry.js, bundle/anthropic-*.js, bundle/chunk-MK52NEXK.js",
+          "default_tier": "anthropic/claude-haiku-4-5",
+          "related": "prime_agent_subagent_model_selection_inherit_or_per_spawn_model_kwarg"
+        },
+        "source": "agent",
+        "created_at": "2026-08-13T15:45:19.860691+00:00",
+        "updated_at": "2026-08-13T15:45:19.860707+00:00",
         "version": 1
       }
     },
-    "memory": {},
-    "skill": {},
+    "memory": {
+      "reddit_research_use_old_reddit_com_html_not_json_or_r_jina_ai": {
+        "id": "reddit_research_use_old_reddit_com_html_not_json_or_r_jina_ai",
+        "kind": "memory",
+        "title": "Reddit research: use old.reddit.com HTML, not .json or r.jina.ai",
+        "content": "When researching Reddit threads, www.reddit.com/*.json and r.jina.ai both return 403 (Cloudflare challenge). old.reddit.com HTML works with a normal browser User-Agent. Parse with BeautifulSoup: 'a.title' for title, 'p.tagline time[datetime]' for date, 'div.expando div.md' for selftext, 'div.comment div.md' for comments (+ 'span.score[title]' for votes, 'a.author'). Note old.reddit comment scores are approximate/normalised, so treat vote counts as rough. Full selftext (long tables etc.) needs a direct fetch of the old.reddit page and get_text('\\n', strip=True) on the expando div rather than a truncated preview.",
+        "path": "general",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {},
+        "source": "agent",
+        "created_at": "2026-08-13T15:02:53.962889+00:00",
+        "updated_at": "2026-08-13T15:02:53.962896+00:00",
+        "version": 1
+      },
+      "aderant_crt_triage_cross_reference_tickets_against_local_repos_and_git_log": {
+        "id": "aderant_crt_triage_cross_reference_tickets_against_local_repos_and_git_log",
+        "kind": "memory",
+        "title": "Aderant/Onyx CRT triage: cross-reference ticket identifiers against local repos and git log (v1)",
+        "content": "When triaging an Aderant/Onyx CRT ticket (repos under ~/sc/compliance/onyx: core-compliance-api, onyx-intake-api, onyx-ui, ocg-extraction, guidelines-*), do not stop at the ticket text. The decisive evidence in ADO 47172 came from two cheap follow-up moves:\n\n1. Grep the local repos for every identifier named in the ticket — Mongo collection names (e.g. `ruleViolations`), field names (e.g. `timekeeperFirstName`, `itkStatus`), and prior CRT numbers. Exclude node_modules and prefer src/ over dist/.\n2. Search git history for the prior CRT number: `git log --oneline --grep=<CRT-number>`. This is what revealed that a prior fix (#149) existed AND had been reverted (#157) — the actual root cause of the re-report. Always check whether a referenced prior fix is still HEAD-effective (`git log -1`, `git show --stat <revert-sha>`) before assuming it is deployed.\n\nAlso: parse and view attachments rather than listing filenames. Spreadsheets (pandas + openpyxl) and screenshots (`await attach_image(path)`) repeatedly contained the decisive evidence — including a DB-query screenshot whose query was subtly wrong.\n\nMongoDB evidence gotcha worth remembering generally: a filter like `{ field: \"\" }` matches ONLY a literal empty string; it does NOT match `null` or an absent field. A CloudOps \"No results\" conclusion built on `{ timekeeperFirstName: \"\" }` was therefore invalid evidence. Use `{ $or: [ {f: {$in: [null, \"\"]}}, {f: {$exists: false}} ] }` when testing for \"missing identity\". (`$ne: \"draft\"` does match missing fields, so that clause was fine.)",
+        "path": "memory/aderant/crt-triage",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "global",
+          "project": "Aderant Onyx / Compliance Platform",
+          "evidence": "ADO 47172 investigation; git log --grep found 54bde93 fix and 2c686ad revert"
+        },
+        "source": "refine",
+        "created_at": "2026-08-13T15:16:27.750Z",
+        "updated_at": "2026-08-13T15:16:27.750Z",
+        "version": 1
+      },
+      "install_python_packages_into_agent_kernel_venv_with_uv_pip_python_sys_executable": {
+        "id": "install_python_packages_into_agent_kernel_venv_with_uv_pip_python_sys_executable",
+        "kind": "memory",
+        "title": "Install Python packages into the agent kernel venv with `uv pip install --python <sys.executable>` (v1)",
+        "content": "The IPython kernel runs in a dedicated venv (observed: /Users/michael.schmitt/.prime/agent/kernel-venv/bin/python, Python 3.11). A bare `uv pip install <pkg>` inside a `%%bash` cell resolves to a different environment, so the import still fails in the kernel — pandas kept raising \"`Import openpyxl` failed. Use pip or conda to install the openpyxl package.\" even after the install reported success.\n\nAlways target the kernel interpreter explicitly:\n\n```python\nimport sys, subprocess\nsubprocess.run([\"uv\", \"pip\", \"install\", \"--python\", sys.executable, \"openpyxl\"],\n               capture_output=True, text=True)\n```\n\nThen use the freshly installed package. For Excel specifically, pass the engine explicitly to avoid a cached/failed-import path: `pd.read_excel(path, sheet_name=None, engine=\"openpyxl\")` (sheet_name=None returns a dict of all sheets, which is what you want for multi-tab customer exports).",
+        "path": "memory/environment/kernel-venv",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "global",
+          "evidence": "openpyxl install failure/recovery during ADO 47172 attachment analysis"
+        },
+        "source": "refine",
+        "created_at": "2026-08-13T15:16:27.750Z",
+        "updated_at": "2026-08-13T15:16:27.750Z",
+        "version": 1
+      },
+      "prove_db_query_semantics_empirically_with_a_throwaway_container_don_t_assert_fro": {
+        "id": "prove_db_query_semantics_empirically_with_a_throwaway_container_don_t_assert_fro",
+        "kind": "memory",
+        "title": "Prove DB query semantics empirically with a throwaway container, don't assert from memory",
+        "content": "When a task hinges on a claim about database/query semantics (e.g. 'does MongoDB `field: \"\"` match null or a missing field?'), do NOT assert it from memory - prove it. Spin up a throwaway container, seed the exact competing shapes, and print which query matches which.\n\nRecipe (MongoDB, ~10s):\n  docker run -d --name tmpmongo -p 37017:27017 mongo:7\n  poll: mongosh mongodb://127.0.0.1:37017 --quiet --eval 'db.runCommand({ping:1})'\n  mongosh mongodb://127.0.0.1:37017 --quiet --file /tmp/probe.js\n  docker rm -f tmpmongo   # always clean up\nSeed one doc per shape: \"\" / null / absent-key / good-value, then diff the match sets.\n\nVerified facts (real MongoDB 7): `{f: \"\"}` is equality against BSON string \"\" and matches ONLY a real empty string - NOT null, NOT a missing field. `{f: null}` matches null OR missing. `{f: {$exists:false}}` matches missing only. `{f: {$ne: X}}` DOES match docs where f is absent, so $ne is not a safe 'has some other value' filter - use `$nin: [X, null]`.\n\nPayoff: this converted 'CloudOps got No results, so there is no bug' into 'that query returns zero rows by construction, which is positive evidence FOR the bug' - the opposite conclusion. The same container can then replay the suspect write/upsert logic verbatim to reproduce the data corruption.\n\nSibling JS gotcha that CREATES absent keys: JSON.stringify DROPS undefined-valued keys, so an unsanitized undefined field silently becomes a MISSING key in the DB rather than \"\". Any field assigned raw from a request DTO without a `x ?? ''` sanitizer is a candidate.",
+        "path": "debugging/databases",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "version": "v1",
+          "evidence": "ADO CRT 47172 ruleViolations write-path RCA"
+        },
+        "source": "agent",
+        "created_at": "2026-08-13T15:22:38.495578+00:00",
+        "updated_at": "2026-08-13T15:22:38.495592+00:00",
+        "version": 1
+      },
+      "prime_agent_subagent_model_selection_inherit_or_per_spawn_model_kwarg": {
+        "id": "prime_agent_subagent_model_selection_inherit_or_per_spawn_model_kwarg",
+        "kind": "memory",
+        "title": "Prime Agent sub-agent model selection: inherit-by-default, per-spawn `model=` kwarg is the only override (v1)",
+        "content": "Verified empirically against the installed dist (node_modules/prime-agent/dist/core: agent-session.js, rlm-runtime.js, model-registry.js, settings-manager.js) plus live spawn probes.\n\n1) There is NO settings.json key for a default sub-agent/child model. settings-manager exposes only `defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `thinkingBudgets`, `enabledModels` (Ctrl+P cycling patterns only) and `rlmMaxDepth`. Do not look for or suggest `defaultSubagentModel`.\n\n2) Default = inheritance. `AgentSession._resolveRlmSubagentModel(reference)` returns the parent model when no reference is passed. Children also inherit provider config, hooks, tools, skills, retry policy, resource loader, and thinking configuration - so a parent `defaultThinkingLevel: \"max\"` also applies to children and cannot be lowered per child. The practical lever on child models is therefore the parent's model: `defaultProvider`/`defaultModel` in settings.json, `--model` on the CLI, `/model` in the TUI, or `prime daemon ... --model`.\n\n3) The only host-supported per-child override is the spawn kwarg:\n   ```python\n   models = await rlm.find_models(\"haiku\", limit=5)   # limit cap = MAX_RLM_MODEL_SEARCH_LIMIT = 20\n   handle = await rlm(\"bulk research task\", name=\"researcher\", model=\"anthropic/claude-haiku-4-5\")\n   print(handle.rlm_child_id, handle.name, handle.model, handle.session_dir)\n   ```\n   The selector must be an exact case-insensitive `provider/id` string from the authenticated catalog. A bare id without the provider prefix fails: `model=\"claude-haiku-4-5\"` -> RuntimeError.\n\n4) No silent fallback. Unavailable / unauthenticated / expired selectors raise `RuntimeError: Requested subagent model \"...\" is unavailable, unauthenticated, or expired`; a selector that resolves but fails `getApiKeyAndHeaders` preflight raises `... failed authentication preflight`. Spawn fails rather than downgrading to another model.\n\n5) Only `name` and `model` kwargs are accepted by `rlm.run`. Anything else raises `Unsupported rlm.run kwargs: <key>` (verified with `thinking=\"low\"`). There is no per-child thinking level, tool set, or depth override.\n\n6) `enabledModels` does NOT restrict child model choice. `rlm.find_models` -> `findRlmModels` -> `getExecutableModels()`/`getAvailable()`, filtered only by configured, non-stale/non-expired provider auth. `enabledModels` is purely a TUI cycling filter.\n\n7) Verified live: parent on `claude-opus-5` spawned child `model-probe-haiku` with `model=\"anthropic/claude-haiku-4-5\"`; the handle reported that model and the child ran and replied via `agent_message`. Clean up probe children with `await rlm.delete_subagent(\"<name>\")`.\n\n8) Depth budget `rlmMaxDepth` precedence (`AgentSession._resolveRlmMaxDepth`): per-session chat override (persisted `rlm_max_depth_state` custom entry) > SDK/inherited config > global settings.json `rlmMaxDepth` > `RLM_MAX_DEPTH` env var > default `1`. At the default, children cannot spawn grandchildren.\n\n9) Policy implication: the host never auto-selects a cheaper model for sub-agents, so cost routing must be expressed in the harness - a prompt note with a model routing table (e.g. extend `prefer_subagents_for_token_heavy_work`) or in subagent spec content. Harness `create_subagent`/`update_subagent` have NO `model` parameter (only title, content, id, path, metadata), so a `model:` line in a subagent spec is just a hint the parent must still pass as `model=` at spawn time.\n\n10) Cost note: child usage folds into the parent turn's billable total but not the parent's context window, so routing bulk read-heavy work to a cheaper child is a real spend reduction, not merely context relief.\n\n11) Per-model effort clamp IS possible at config level (verified in dist/core/model-registry.js): `ModelOverrideSchema` accepts `thinkingLevelMap` and `reasoning` (the docs' `modelOverrides` field list at docs/models.md is stale and omits `thinkingLevelMap`). `~/.prime/agent/models.json` -> `providers.<provider>.modelOverrides.<model-id>` is keyed by plain built-in model id (`loadBuiltInModels` looks up `perModelOverrides.get(m.id)`), merges via `applyModelOverride`, and built-in provider overrides keep existing OAuth auth. `thinkingLevelMap` keys are `off|minimal|low|medium|high|xhigh|max`; a string value is sent to the provider, `null` marks the level unsupported and `clampThinkingLevel` (dist/bundle/chunk-MK52NEXK.js:20685) clamps upward first, then downward, so nulling the top levels forces a downshift. Anthropic `mapThinkingLevelToEffort` uses the mapped string for adaptive-thinking models (opus-4.6/4.7/4.8, opus-5, sonnet-4.6, sonnet-5, fable-5, mythos); older ids (haiku-4-5, sonnet-4-5, opus-4-5) are token-budget based via settings.json `thinkingBudgets`. So item 2's \"cannot be lowered per child\" is true only for `rlm.run` kwargs - clamping the model a child is routed to achieves it indirectly. THINKING_LEVELS in agent-session.js includes `\"max\"` beyond the documented six.\n\n12) Built-in Anthropic catalog cost ($/Mtok input/output, from dist/bundle/chunk-MK52NEXK.js): haiku-4-5 1/5; sonnet-5 2/10; sonnet-4-5 and sonnet-4-6 3/15; opus-4-5, opus-4-6, opus-4-7, opus-4-8, opus-5 all 5/25; fable-5 10/50. Note sonnet-5 is cheaper than sonnet-4-5. Only providers present in ~/.prime/agent/auth.json are spawnable (here: anthropic OAuth only, so `openai-codex/*` in `recentModels` would fail preflight).",
+        "path": "memory/prime-agent/subagent-model-selection",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "global",
+          "verified": "empirical: dist source read + live spawn/kwarg probes",
+          "source": "node_modules/prime-agent/dist/core/{agent-session,rlm-runtime,model-registry,settings-manager}.js; docs/rlm-runtime.md",
+          "see_also": "subagent_model_and_effort_routing"
+        },
+        "source": "agent",
+        "created_at": "2026-08-13T15:39:23.777Z",
+        "updated_at": "2026-08-13T15:45:48.455000+00:00",
+        "version": 2
+      },
+      "blame_assignment_across_an_integration_boundary_test_the_consumer_s_last_fallbac": {
+        "id": "blame_assignment_across_an_integration_boundary_test_the_consumer_s_last_fallbac",
+        "kind": "memory",
+        "title": "Blame-assignment across an integration boundary: test the consumer's LAST fallback, and hunt purpose-built dead code",
+        "content": "When validating a theory of the form 'system A omits field X, which is why system B renders a placeholder', do NOT stop at proving A sometimes sends X empty. Three decisive moves:\n\n1. FIND THE CONSUMER'S FALLBACK CHAIN AND TEST ITS LAST LINK. B usually resolves a display value through an ordered chain (fullName -> first/last -> email -> code -> '-'). The placeholder requires EVERY link to be empty. If producer A unconditionally populates the LAST link, A is EXONERATED no matter how many earlier fields it blanks - the symptom would render that last link instead of the placeholder. Verified example (ADO CRT 47172): every iTimeKeep payload builder set `tk_id = userId.toString()`, and Onyx mapped timekeeperCode <- tk_id as the final fallback, so ITK could only ever render the code '12145', never '-'. That one check flipped the verdict from 'ITK's fault' to 'not ITK' and redirected the fix to the right team.\n\n2. 'FAILS CLOSED' BEATS 'COULD BE UNDEFINED'. A builder missing a `|| ''` guard looks damning, but check the request DTO validators and the global pipe first. class-validator @IsNotEmpty/@IsEmail plus a NestJS global ValidationPipe({whitelist, forbidNonWhitelisted}) turns the hypothetical blank into a 400, so that path can never emit the bad shape. Report it as a latent robustness gap, not an active defect.\n\n3. PURPOSE-BUILT DEAD CODE IS STRONG EVIDENCE. Grep for an API/method that exists precisely to reconcile the inconsistency you are chasing, then grep its CALLERS excluding tests (filter out *.spec.*, __tests__, tests/Specs, TestHelpers, Fake*). Finding it implemented in every client yet invoked by nobody converts a hypothesis into a confirmed defect. Example: OCG `renametimecard` (id_current -> id_new) shipped in both itk-desktop and itk-mobile with zero production callers, proving temporary LOCAL-<uuid> documents are orphaned in the database forever.\n\nAlways split a compound theory into independently-owned defects and rule on each separately - they frequently belong to different teams. Also: when a fix is constrained (e.g. 'no per-entry DB lookups, a prior attempt caused a 10s->60s regression'), prefer an indexed query-side filter (exclude entryId LIKE 'LOCAL-%'), an in-memory sanitizer, or a one-off offline batch backfill.",
+        "path": "debugging/integration-blame",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {},
+        "source": "agent",
+        "created_at": "2026-08-13T16:03:25.439173+00:00",
+        "updated_at": "2026-08-13T16:03:25.439181+00:00",
+        "version": 1
+      },
+      "verify_load_bearing_claims_from_delegates_objectid_dating_dead_code_check": {
+        "id": "verify_load_bearing_claims_from_delegates_objectid_dating_dead_code_check",
+        "kind": "memory",
+        "title": "Independently verify a delegate's LOAD-BEARING claims; date records via ObjectId prefix; confirm a live caller before blaming code (v1)",
+        "content": "When a sub-agent, colleague, or ticket supplies a root-cause narrative, do NOT relay it. Identify the claims the conclusion actually rests on, re-verify each one yourself, and actively cross-check them against evidence you already established. Two concrete wins (CRT 47172, Aderant/Onyx):\n\n1) CONTRADICTION HUNT. A sub-analysis explained the missing data as 'stale pre-2024-05-30 documents'. I had already decoded the affected records' creation dates as 2026-08-03..06 - three days old. The narrative was internally inconsistent with established evidence and was refuted on the spot. Always ask: does this explanation survive the facts I already proved?\n\n2) DEAD-CODE TRAP. `OnyxTimeEntryMapper.ts:38` hardcoded `timekeeperCode: ''` and set no name fields at all - a perfect symptom match. A full cross-repo reference search (`grep -rn '<ClassName>' --include=*.ts --include=*.js . | grep -v node_modules`, plus barrel/index exports and `git log` on the file) showed the only references were `ocg-tests` specs and the compiled `lib/` output; no production caller since May 2023. Reporting it would have cost the team a day. RULE: before naming a suspicious code path as the cause, prove it has a LIVE production caller. Check src imports, barrel exports, dynamic/string-based registration, and last functional commit. If it is dead, say so explicitly and recommend deleting it so nobody else loses time.\n\n3) FREE TIMESTAMPS FROM IDS. An 8-hex-character token appearing in a report/export is often a MongoDB ObjectId prefix (`_id.substring(0,8)`), i.e. the 4-byte big-endian Unix epoch seconds of insertion. Decode it (`datetime.utcfromtimestamp(int(hex8, 16))`) to date records when the schema has no createdAt column. This is the cheapest way to distinguish 'legacy data' from 'live defect'.\n\nAlso state plainly what you VERIFIED vs INFERRED, and name the one query/experiment that would settle any remaining gap instead of asserting a plausible story.",
+        "path": "memory/debugging/verification-discipline",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "global",
+          "evidence": "CRT 47172: refuted 'stale pre-2024 docs' via ObjectId prefix decode (2026-08-03..06); proved OnyxTimeEntryMapper.ts:38 is dead code (tests + compiled lib only, last functional change May 2023)."
+        },
+        "source": "refine",
+        "created_at": "2026-08-13T16:09:07.394Z",
+        "updated_at": "2026-08-13T16:09:07.394Z",
+        "version": 1
+      },
+      "mongodb_or_index_union_requires_every_branch_indexed_check_before_blaming_design": {
+        "id": "mongodb_or_index_union_requires_every_branch_indexed_check_before_blaming_design",
+        "kind": "memory",
+        "title": "MongoDB multi-branch $or needs EVERY branch indexed; a new field in an $or filter is unindexed on day one (v1)",
+        "content": "MongoDB can serve an `$or` by index union (winning plan `FETCH <- OR <- IXSCAN`) only if EVERY branch is indexable. A single unindexed branch degrades the whole query: the planner falls back to scanning (often an unbounded walk of a leading-prefix index, plan shows `FETCH <- IXSCAN` with no `OR` node). Corollary: adding a BRAND-NEW field to an `$or` upsert/lookup filter is inherently unindexed on day one - no deploy can retroactively create the index, and many services never call `createIndex` at all (verify with `grep -rniE 'createIndex|ensureIndex' src/`).\n\nProved empirically in a throwaway `mongo:7` container, 300k docs, only `{tenantId:1,entryId:1}` and `{tenantId:1,localId:1}` present:\n- 2-branch $or (both indexed): `FETCH <- OR <- IXSCAN`, docsExamined 1, 3ms\n- 4-branch $or (2 branches unindexed, one field newly introduced): `FETCH <- IXSCAN`, docsExamined 300,000, 214ms => 300,000x docs examined, 71x latency\n- after adding `{tenantId:1,externalId:1}` and `{tenantId:1,rawEntryId:1}`: index union restored, docsExamined 1, 1ms (better than the original)\n\nHOW TO PROVE IT IN SECONDS: `db.coll.find(filter).explain('executionStats')` and read `totalDocsExamined` / `totalKeysExamined` vs `nReturned`, plus whether the winning plan contains an `OR` stage. A docsExamined:nReturned ratio in the thousands is the smoking gun. Cost scales with the leading-prefix partition size (e.g. that tenant's doc count) multiplied by every entry in a batch, so a filter evaluated once per `updateOne` inside a `bulkWrite` amplifies catastrophically.\n\nLESSONS:\n1. When a functionally correct fix is reverted for a performance regression, check INDEX COVERAGE of every new predicate branch BEFORE concluding the design was wrong. It is often a missing-index bug and the change is re-landable after a background/rolling index build verified with `explain()` in pre-prod.\n2. Separate bundled changes when triaging a revert: a pure in-memory transform in the same commit is usually innocent and can be re-landed alone at zero risk.\n3. Never add a per-entry DB lookup to a batch/evaluation hot path. If enrichment is unavoidable server-side, batch it (one `$in` per batch, not per entry) plus an in-process TTL cache, and load-test. Prefer fixing the producer so the payload already carries the data.\n4. Swallowed `bulkWrite` errors (`catch (e) { logger.error(e) }`) make partial-failure regressions invisible - add alerting before re-landing.",
+        "path": "memory/databases/mongodb-or-index-union",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "scope": "global",
+          "evidence": "CRT 47172 / core-compliance-api PR #149: throwaway mongo:7 container, 300k docs; 4-branch $or examined 300,000 docs vs 1 (71x latency); adding the 2 missing compound indexes restored FETCH<-OR<-IXSCAN at 1 doc / 1ms. Explained a real sub-10s -> 60s+ production regression that caused a correct fix to be reverted."
+        },
+        "source": "refine",
+        "created_at": "2026-08-13T16:09:07.394Z",
+        "updated_at": "2026-08-13T16:09:07.394Z",
+        "version": 1
+      },
+      "mine_ollama_log_not_ollama_logs_for_real_prefill_kv_memory_pressure_data_before_": {
+        "id": "mine_ollama_log_not_ollama_logs_for_real_prefill_kv_memory_pressure_data_before_",
+        "kind": "memory",
+        "title": "Mine ollama.log (not ~/.ollama/logs) for real prefill/KV/memory-pressure data before ever loading a model to test it",
+        "content": "When asked to empirically measure local-LLM inference performance/context limits on Ollama\n(any OS), DO NOT load a model to test it if one might already be resident/benchmarking — mine\nexisting logs first, non-invasively:\n\n1. Find the real log: `~/.ollama/logs/` often doesn't exist on newer Ollama. Instead find the\n   `ollama serve` process (`ps aux | grep ollama`) and `lsof -p <pid> | grep log` — on macOS/\n   Homebrew it's typically `/opt/homebrew/var/log/ollama.log`. It's ollama-serve's stdout/stderr,\n   append-only, and can span months. `llama-server` (Ollama's runner, launched with\n   `--log-verbosity 4`) inherits that same stream, so ALL its per-request timing lines land there\n   too — no separate runner log to hunt for.\n\n2. Segment by process, not by model name: grep for `msg=\"starting llama-server\"` (Ollama ≥0.32)\n   OR `msg=\"starting runner\"` (older versions use `ollama runner --model ...` instead of calling\n   `llama-server` directly — format changed across versions, check both). Each match's `cmd=\"...\"`\n   contains `--model <blob-path>`, `-c <num_ctx>`, `--no-mmap` (present/absent), `-b/-ub <batch>`,\n   `--mmproj` (present = vision/VL model). Everything between one such line and the next belongs to\n   that one loaded instance.\n\n3. Map blob sha256 -> model name: read\n   `~/.ollama/models/manifests/registry.ollama.ai/library/<name>/<tag>` (JSON), find the `layers`\n   entry whose `mediaType` ends in `.image.model`, its `digest` (sha256:...) is the blob filename\n   under `~/.ollama/models/blobs/`. `ollama list`/`ollama show` are read-only and safe to run even\n   while another model is loaded (they don't touch the runner).\n\n4. Real prefill/decode throughput needs no computation — llama.cpp self-reports it. Grep\n   `print_timing` lines: `prompt eval time = X ms / Y tokens (... Z tokens per second)` = prefill;\n   the immediately following `eval time = ...` line (NOT prefixed \"prompt \") = decode. Task IDs\n   pair them. Use these Z values directly; don't recompute from ms/tokens (rounding).\n\n5. KV-cache size is also directly logged, not just formula-derived: `llama_kv_cache: size = X MiB\n   (N cells, L layers, ...)`. For hybrid/sliding-window-attention models (e.g. gpt-oss) look for\n   `llama_kv_cache_iswa`, which prints TWO lines: a \"non-SWA\" cache that scales with `n_ctx`, and a\n   \"SWA\" cache whose cell count is pinned near `window + ubatch` and does NOT grow with `n_ctx` —\n   this is the empirical signature of hybrid attention and dramatically changes long-context KV\n   math (validate any n_head_kv/head_dim-based formula against these exact MiB figures — q8_0 KV\n   cache is 34/32=1.0625 bytes/element, not 1 or 2).\n\n6. The single most valuable signal for \"is memory actually the bottleneck\" is the pair:\n   `msg=\"disabling mmap for llama-server load by default\" reason=metal_partial_offload` +\n   the `msg=\"system memory\" ... free=\"X GiB\"` line right before it. On memory-constrained boxes\n   (Ollama's own `system_limited=true`), THE SAME model at THE SAME `num_ctx` flips between\n   full-GPU (`no_mmap=False`) and degraded (`no_mmap=True`) purely based on how much RAM was free\n   at that specific load moment — not a fixed property of model+context. Measured effect: 2-2.7x\n   prefill slowdown in degraded mode, even though `load_tensors: offloaded N/N layers to GPU`\n   shows ALL layers stayed GPU-resident in both cases (so it's not literally CPU-layer-offload;\n   most likely unified-memory bandwidth contention). Ollama's degradation threshold is also more\n   conservative than a naive \"does weights+KV fit under the GPU ceiling\" byte-math check — it can\n   degrade a config that clearly fits on paper.\n\n7. Lock/flock safety: if a task warns a benchmark lock is held, check the PID inside the lock file\n   is actually alive (`ps -p <pid>`) before treating it as blocking — a lock file can outlive a\n   crashed/finished holder. Even when genuinely free, prefer a single minimal probe (one model, one\n   request, `keep_alive:0` cleanup) over anything that risks evicting a resident model; log-mining\n   first usually removes the need for a live probe entirely.\n\nNet effect: you can get real per-model prefill/decode tok/s across a wide range of prompt lengths,\nexact KV-cache bytes/token (cross-validated, not just theoretical), and direct evidence of memory-\npressure-triggered slowdowns, entirely by reading existing logs — zero risk to anything currently\nrunning.",
+        "path": "debugging/local-llm-perf",
+        "scope": "global",
+        "reference": {},
+        "arguments": {},
+        "metadata": {
+          "tags": [
+            "ollama",
+            "llama.cpp",
+            "gguf",
+            "performance",
+            "context-window",
+            "non-invasive-measurement"
+          ]
+        },
+        "source": "agent",
+        "created_at": "2026-08-13T20:44:15.094977+00:00",
+        "updated_at": "2026-08-13T20:44:15.094994+00:00",
+        "version": 1
+      }
+    },
+    "skill": {
+      "ado_fetch_work_item_context": {
+        "id": "ado_fetch_work_item_context",
+        "kind": "skill",
+        "title": "Fetch full Azure DevOps work-item context (fields, comments, attachments)",
+        "content": "Pull a complete, analysis-ready context pack for an Azure DevOps work item using the already-authenticated `az` CLI (azure-devops extension). No PAT required.\n\nWhy a skill: three separate gotchas were discovered the hard way and are easy to re-lose.\n\n1) Fields + relations (attachment names/urls) — `--expand all` is REQUIRED; the default response omits `relations`:\n   az boards work-item show --id <ID> --org https://<org>.visualstudio.com/ --expand all --output json\n\n2) Comments are NOT returned by `az boards work-item show`. Use the REST API through `az rest`, passing the well-known Azure DevOps AAD resource id so existing `az login` credentials are reused:\n   az rest --method get \\\n     --uri \"https://<org>.visualstudio.com/<Project%20URL%20Encoded>/_apis/wit/workItems/<ID>/comments?api-version=7.1-preview.4\" \\\n     --resource \"499b84ac-1321-427f-aa17-267ca6975798\" --output json\n\n3) Attachment bytes use the same auth trick; binaries need `--output-file`:\n   az rest --method get --uri <relation.url> \\\n     --resource \"499b84ac-1321-427f-aa17-267ca6975798\" --output-file <dest>\n\nHTML fields: Salesforce-synced items carry the real narrative in HTML — `System.Description`, `Custom.RandDDefault`, `System.History`, and each comment's `text`. Convert with a <br>/<p>-aware html->text pass plus `html.unescape`, or the narrative is unreadable.\n\nAderant CRT Task custom fields worth surfacing: `Custom.Client`, `Custom.CaseNumber`, `Custom.CaseOwner`, `Custom.SalesforceCaseStatus`, `Custom.SalesforcePriority`, `Custom.Environment`, `Custom.RandDDefault`.\n\nReference implementation (drop into the kernel and call):\n\n```python\nimport html, json, os, re, subprocess\n\nADO_RESOURCE = \"499b84ac-1321-427f-aa17-267ca6975798\"\n\ndef _az(args):\n    r = subprocess.run([\"az\", *args], capture_output=True, text=True)\n    if r.returncode != 0:\n        return {\"__error__\": (r.stderr or r.stdout)[:2000]}\n    return json.loads(r.stdout) if r.stdout.strip() else {}\n\ndef strip_html(s):\n    if not s:\n        return \"\"\n    s = re.sub(r\"<\\s*br\\s*/?>\", \"\\n\", s, flags=re.I)\n    s = re.sub(r\"</\\s*(p|div|tr|li|h\\d)\\s*>\", \"\\n\", s, flags=re.I)\n    s = re.sub(r\"<[^>]+>\", \"\", s)\n    return html.unescape(s).strip()\n\nasync def fetch_ado_work_item_context(work_item_id, org, project=None,\n                                     out_dir=None, download_attachments=True,\n                                     include_comments=True):\n    org_url = org if org.startswith(\"http\") else f\"https://{org}.visualstudio.com/\"\n    wi = _az([\"boards\", \"work-item\", \"show\", \"--id\", str(work_item_id),\n              \"--org\", org_url, \"--expand\", \"all\", \"--output\", \"json\"])\n    if \"__error__\" in wi:\n        return wi\n    fields = wi.get(\"fields\", {})\n    project = project or fields.get(\"System.TeamProject\")\n\n    out = {\n        \"id\": work_item_id,\n        \"rev\": wi.get(\"rev\"),\n        \"fields\": fields,\n        \"narrative\": {k: strip_html(fields.get(k))\n                      for k in (\"System.Description\", \"Custom.RandDDefault\",\n                                \"System.History\")},\n        \"comments\": [],\n        \"attachments\": [],\n    }\n\n    if include_comments and project:\n        proj = project.replace(\" \", \"%20\")\n        uri = (f\"{org_url.rstrip('/')}/{proj}/_apis/wit/workItems/\"\n               f\"{work_item_id}/comments?api-version=7.1-preview.4\")\n        c = _az([\"rest\", \"--method\", \"get\", \"--uri\", uri,\n                 \"--resource\", ADO_RESOURCE, \"--output\", \"json\"])\n        if \"__error__\" not in c:\n            out[\"comments\"] = [\n                {\"createdDate\": x.get(\"createdDate\"),\n                 \"createdBy\": (x.get(\"createdBy\") or {}).get(\"displayName\"),\n                 \"text\": strip_html(x.get(\"text\"))}\n                for x in sorted(c.get(\"comments\", []),\n                                key=lambda x: x.get(\"createdDate\") or \"\")\n            ]\n\n    for rel in wi.get(\"relations\") or []:\n        if rel.get(\"rel\") != \"AttachedFile\":\n            continue\n        attrs = rel.get(\"attributes\") or {}\n        item = {\"name\": attrs.get(\"name\"), \"size\": attrs.get(\"resourceSize\"),\n                \"url\": rel.get(\"url\"), \"path\": None}\n        if download_attachments and out_dir:\n            adir = os.path.join(out_dir, \"attachments\")\n            os.makedirs(adir, exist_ok=True)\n            dest = os.path.join(adir, item[\"name\"])\n            subprocess.run([\"az\", \"rest\", \"--method\", \"get\",\n                            \"--uri\", item[\"url\"], \"--resource\", ADO_RESOURCE,\n                            \"--output-file\", dest],\n                           capture_output=True, text=True)\n            item[\"path\"] = dest if os.path.exists(dest) else None\n        out[\"attachments\"].append(item)\n\n    if out_dir:\n        os.makedirs(out_dir, exist_ok=True)\n        with open(os.path.join(out_dir, f\"work-item-{work_item_id}.json\"), \"w\") as f:\n            json.dump(out, f, indent=2, default=str)\n    return out\n```\n\nRLM-native call form:\n  `ctx = await fetch_ado_work_item_context(47172, org=\"bellefieldsystems\", project=\"Compliance Platform\", out_dir=\"/path/to/ado-47172\")`\n\nAfter fetching, always follow up with the cross-reference tactic: grep local repos and `git log --grep=<ticket-number>` for identifiers named in the ticket, and actually parse/view attachments (pandas+openpyxl for .xlsx, `await attach_image(path)` for screenshots) rather than just listing filenames.",
+        "path": "skills/azure-devops/work-item-context",
+        "scope": "global",
+        "reference": {
+          "type": "python",
+          "import": "ado_context",
+          "callable": "fetch_ado_work_item_context",
+          "call_pattern": "await fetch_ado_work_item_context(work_item_id, org=\"bellefieldsystems\", project=\"Compliance Platform\", out_dir=\"/path/to/out\")"
+        },
+        "arguments": {
+          "work_item_id": {
+            "type": "integer|string",
+            "required": true,
+            "description": "Azure DevOps work item id, e.g. 47172."
+          },
+          "org": {
+            "type": "string",
+            "required": true,
+            "description": "Org short name (e.g. 'bellefieldsystems') or full org URL. Short names are expanded to https://<org>.visualstudio.com/."
+          },
+          "project": {
+            "type": "string",
+            "required": false,
+            "default": "value of System.TeamProject from the fetched item",
+            "description": "Project name for the comments REST URI; spaces are URL-encoded automatically."
+          },
+          "out_dir": {
+            "type": "string",
+            "required": false,
+            "default": "None",
+            "description": "Directory to write work-item-<id>.json and an attachments/ subfolder. Attachments are only saved when this is set."
+          },
+          "download_attachments": {
+            "type": "boolean",
+            "required": false,
+            "default": "True",
+            "description": "Download AttachedFile relations via az rest --output-file. Requires out_dir."
+          },
+          "include_comments": {
+            "type": "boolean",
+            "required": false,
+            "default": "True",
+            "description": "Fetch comments via the wit comments REST endpoint (api-version=7.1-preview.4) using --resource 499b84ac-1321-427f-aa17-267ca6975798."
+          }
+        },
+        "metadata": {
+          "scope": "global",
+          "validated_on": "bellefieldsystems / Compliance Platform / work item 47172",
+          "prereqs": "az CLI authenticated (az login); azure-devops extension installed (v1.0.2 verified)"
+        },
+        "source": "refine",
+        "created_at": "2026-08-13T15:16:27.750Z",
+        "updated_at": "2026-08-13T15:16:27.750Z",
+        "version": 1
+      }
+    },
     "subagent": {}
   },
   "refinements": [
@@ -34,6 +281,82 @@
       "evidence": "Global harness had no existing delegation prompt notes; created a compact policy directing early subagent delegation for context-heavy or independent work.",
       "outcome": "Future sessions should delegate more repo/web/log/review work to subagents and keep the parent session compact.",
       "created_at": "2026-08-12T22:29:34.959677+00:00"
+    },
+    {
+      "id": "refine_0002",
+      "trigger": "Child agent at RLM_DEPTH=1 tried to fan out its own subagents for parallel research and hit RuntimeError: RLM recursion depth limit reached (RLM_DEPTH=1, RLM_MAX_DEPTH=1).",
+      "changes": [
+        "Added global memory 'reddit_research_use_old_reddit_com_html_not_json_or_r_jina_ai' with the working old.reddit.com scraping recipe.",
+        "Recorded that subagents cannot re-delegate when RLM_MAX_DEPTH=1, so they must plan sequential in-session research."
+      ],
+      "evidence": "rlm('...') raised RuntimeError immediately on first call; both planned child research tasks (practitioner/ecosystem, competitor/platform) had to be executed in-session instead.",
+      "outcome": "Delegation plans should check the depth budget first: a spawned child at max depth must do its own work. Sequential fetching with a module-level URL cache plus a text-extraction helper was a fine substitute and still produced a 50-URL, 8.3k-word evidence-backed report.",
+      "created_at": "2026-08-13T15:03:05.256431+00:00"
+    },
+    {
+      "id": "refine_20260813151527113",
+      "trigger": "Persist a global Azure DevOps work-item context-extraction skill plus supporting memories for CRT triage tactics and the kernel-venv pip gotcha.",
+      "changes": [
+        "create skill:ado_fetch_work_item_context",
+        "create memory:aderant_crt_triage_cross_reference_tickets_against_local_repos_and_git_log",
+        "create memory:install_python_packages_into_agent_kernel_venv_with_uv_pip_python_sys_executable"
+      ],
+      "evidence": "This session validated an end-to-end recipe for pulling ADO work-item context (fields via `az boards work-item show --expand all`, comments and attachment bytes via `az rest` with the well-known ADO AAD resource GUID 499b84ac-1321-427f-aa17-267ca6975798, and HTML-stripping of Salesforce-synced fields). The same session also proved two durable, reusable lessons: (a) grepping local repos and `git log --grep=<CRT-number>` for ticket identifiers surfaced the actual answer (a prior fix and its revert), and attachment spreadsheets/screenshots held the decisive evidence; (b) `uv pip install openpyxl` in a %%bash cell installed into the wrong environment and pandas still failed, while `uv pip install --python <sys.executable> openpyxl` worked. All of these are cross-session, tool/environment-level facts explicitly requested for global scope, and the ADO/Aderant items are project-qualified.",
+      "outcome": "Future sessions can fetch complete ADO work-item context (fields, relations, comments, downloaded attachments, readable narrative text) in one call without rediscovering the --expand all requirement or the az rest --resource auth trick, will default to cross-referencing ticket identifiers against local repos and git history, and will install kernel packages with the correct --python flag on the first try. Validate by invoking the skill on any bellefieldsystems work item and confirming comments and attachment files are returned/downloaded, and by a clean `pd.read_excel(..., engine='openpyxl')` after the documented install.",
+      "created_at": "2026-08-13T15:16:27.750Z"
+    },
+    {
+      "id": "refine_0004",
+      "trigger": "CRT 47172 RCA: a task required confirming a MongoDB matching claim that a CloudOps engineer had used to (incorrectly) close the ticket. Asserting the semantics from memory would have been unverifiable; a 10-second throwaway mongo:7 container proved it and also reproduced the write-path data corruption end-to-end.",
+      "changes": [
+        "Added global memory 'Prove DB query semantics empirically with a throwaway container' under debugging/databases, with the mongosh+docker recipe, the four verified match-semantics facts (\"\" vs null vs absent vs $ne), and the JSON.stringify-drops-undefined gotcha that creates absent keys in the first place."
+      ],
+      "evidence": "",
+      "outcome": "Future DB-semantics questions get empirically proven rather than asserted, and the same container can replay suspect upsert logic verbatim to reproduce corruption. Two reusable heuristics captured: (1) `field: \"\"` never matches null/absent so it is the wrong probe for missing data, and `$ne` silently includes absent docs; (2) unsanitized undefined DTO fields become MISSING keys, not \"\", which is why such bugs are invisible to naive empty-string queries.",
+      "created_at": "2026-08-13T15:22:48.174782+00:00"
+    },
+    {
+      "id": "refine_20260813153853679",
+      "trigger": "Persist a global memory documenting empirically verified prime-agent sub-agent model selection and depth-budget mechanics.",
+      "changes": [
+        "create memory:prime_agent_subagent_model_selection_inherit_or_per_spawn_model_kwarg"
+      ],
+      "evidence": "The session exhaustively read the installed prime-agent dist (agent-session.js `_resolveRlmSubagentModel`, rlm-runtime.js, settings-manager.js) and confirmed behavior with live probes: bogus and provider-prefix-less selectors both raised 'Requested subagent model ... is unavailable, unauthenticated, or expired', `thinking=\"low\"` raised 'Unsupported rlm.run kwargs: thinking', and a parent on claude-opus-5 successfully spawned a child on anthropic/claude-haiku-4-5 whose handle reported that model. These are durable, cross-session tool/environment facts about the runtime itself (not session progress), so they belong in the global store; recording them prevents future sessions from re-grepping dist or wrongly assuming a `defaultSubagentModel` setting or a silent cheaper-model fallback exists. The user explicitly requested the global memory. No prompt edit is proposed because the user was still asked which model to route bulk work to and has not answered, so extending prefer_subagents_for_token_heavy_work with a routing table would encode an unconfirmed preference.",
+      "outcome": "Future sessions asked how to control sub-agent/child model selection (or attempting to route work to a cheaper child) will answer or act correctly on the first try: inherit-by-default, per-spawn `model='provider/id'` only, exact selector from `rlm.find_models`, no silent fallback, only `name`/`model` kwargs, and correct rlmMaxDepth precedence. Validate by asking a fresh session the same question and confirming it cites inheritance plus the per-spawn kwarg without re-grepping dist, and by a successful `await rlm(..., model='anthropic/claude-haiku-4-5')` spawn where the handle reports the requested model.",
+      "created_at": "2026-08-13T15:39:23.777Z"
+    },
+    {
+      "id": "refine_0006",
+      "trigger": "User asked to add global prime-agent context making sub-agent model and effort selection dynamic and task-suited, explicitly not defaulting to highest effort on the most expensive model.",
+      "changes": [
+        "create prompt:subagent_model_and_effort_routing (global, policy/delegation) - 3-tier cost-aware routing ladder with real $/Mtok costs, escalate-on-failure rule, prompt-level effort discipline, and the models.json modelOverrides clamp.",
+        "update prompt:prefer_subagents_for_token_heavy_work (v2) - require an explicit per-task model= selector; inheriting the parent model is now a deliberate tier-3 choice.",
+        "update memory:prime_agent_subagent_model_selection_inherit_or_per_spawn_model_kwarg (v2) - added verified modelOverrides.thinkingLevelMap/reasoning effort clamp (docs field list is stale) and the built-in Anthropic cost table."
+      ],
+      "evidence": "",
+      "outcome": "Sub-agent spawns now default to anthropic/claude-haiku-4-5 for read/search/summarize work, sonnet-5 for bounded implementation and debugging, and opus/parent-model only for genuine reasoning depth, with escalation on demonstrated failure instead of pre-emptive top-tier spend.",
+      "created_at": "2026-08-13T15:45:48.457556+00:00"
+    },
+    {
+      "id": "refine_0007",
+      "trigger": "Task: validate an engineering lead's theory that CRT 47172 (blank '-' timekeeper in the Onyx Violation Report) was caused by iTimeKeep source. A naive read would have CONFIRMED the theory, because ITK genuinely can blank the three timekeeper NAME fields.",
+      "changes": [
+        "create memory:blame_assignment_across_an_integration_boundary_test_the_consumer_s_last_fallbac (global, debugging/integration-blame) - test the consumer's LAST fallback link, treat DTO-validation 'fails closed' as exoneration, and hunt purpose-built dead code."
+      ],
+      "evidence": "Onyx mapTimekeeperName falls back fullName -> first/last -> email -> code -> '-', so '-' needs all five empty. OnyxBatchTimeEntryMapper.ts:72 maps timekeeperCode <- tk_id, and tk_id is unconditionally non-empty in all 4 ITK builders (desktop OcgService.ts:96, mobile :368, itk-services @IsNotEmpty + global ValidationPipe at main.ts:98-104). Conversely renametimecard / renameTimeEntry (desktop OcgWebservice.ts:20-22 + OcgService.ts:397-406, mobile SDK OcgWebservice.ts:26-28) had ZERO non-test callers, so LOCAL-<uuid> docs are orphaned permanently.",
+      "outcome": "Compound blame theories now get split per-defect and ruled on separately; producer exoneration is tested against the consumer's last fallback rather than the first blank field. Prevented misrouting the fix: missing-names is Onyx-owned (OCGApiDTOs stringFields), unstable-id is ITK-owned, and 6/8 bad rows are fixable with a zero-cost indexed 'entryId LIKE LOCAL-%' filter instead of the banned per-entry DB lookup.",
+      "created_at": "2026-08-13T16:03:47.974610+00:00"
+    },
+    {
+      "id": "refine_20260813160825465",
+      "trigger": "Persist two global debugging lessons: independently verify a delegate's load-bearing root-cause claims (with ObjectId dating and dead-code detection tactics), and treat MongoDB multi-branch $or index-union requirements as a first-check for reverted performance fixes.",
+      "changes": [
+        "create memory:verify_load_bearing_claims_from_delegates_objectid_dating_dead_code_check",
+        "create memory:mongodb_or_index_union_requires_every_branch_indexed_check_before_blaming_design"
+      ],
+      "evidence": "Both lessons are cross-session, tool/database-general, and were proven empirically in this trajectory rather than asserted. (1) The itk-analyst sub-agent's narrative contained a load-bearing claim ('stale pre-2024-05-30 docs') that was refuted by decoding ObjectId prefixes to 2026-08-03..06, and a second plausible-looking culprit (OnyxTimeEntryMapper.ts:38 hardcoding timekeeperCode: '') that a full reference search proved was dead code with no production caller since 2023 - chasing it would have cost real team time. That generalizes into a reusable verification discipline plus two concrete tactics (8-hex id = ObjectId prefix = free creation timestamp; confirm a live caller before naming a code path as cause). (2) The MongoDB $or index-union rule was proven in a throwaway mongo:7 container: the 4-branch filter examined 300,000 docs vs 1 (71x latency), and adding {tenantId:1,externalId:1} + {tenantId:1,rawEntryId:1} restored FETCH<-OR<-IXSCAN at 1 doc / 1ms - showing a correct fix had been reverted for a missing-index bug, not a design flaw. That is a durable database/performance heuristic. The requested local memory update to crt_47172_verified_root_cause_and_artifacts is out of scope for this global-scope refinement, so it is intentionally omitted here.",
+      "outcome": "Future sessions receiving a sub-agent or colleague root-cause report will re-verify its load-bearing claims and cross-check them against already-established evidence before relaying, will date MongoDB records from ObjectId prefixes when no timestamp column exists, and will confirm a suspicious code path has a live production caller before naming it as the cause. Future performance investigations will check index coverage of every $or branch (via explain('executionStats') docsExamined/nReturned) before concluding a reverted fix was architecturally wrong, and will avoid per-entry DB lookups on batch hot paths. Validate by asking a fresh session (a) 'a teammate says the blank rows are stale legacy docs - how do you check?' and confirming it proposes ObjectId-prefix decoding, and (b) 'our fix was reverted for a 6x latency regression on a Mongo upsert $or filter' and confirming it checks index coverage of all branches first.",
+      "created_at": "2026-08-13T16:09:07.394Z"
     }
   ]
 }

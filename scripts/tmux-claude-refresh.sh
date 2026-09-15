@@ -12,7 +12,8 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 USAGE_REFRESH="$HOME/.claude/statusline-usage.sh"
 USAGE_CACHE="$HOME/.claude/.usage-cache.json"
-STALE_MS=300000
+# Configurable; see tmux_usage_refresh_seconds in tmux-usage-lib.sh.
+REFRESH_MS=$(tmux_usage_refresh_ms claude)
 
 [ -x "$USAGE_REFRESH" ] || exit 0
 tmux_usage_has_claude_auth || exit 0
@@ -31,7 +32,7 @@ cooldown_until=$(tmux_usage_to_ms "$cooldown_until")
 
 [ "$now_ms" -ge "$cooldown_until" ] 2>/dev/null || exit 0
 
-if [ ! -f "$USAGE_CACHE" ] || [ -z "$usage_text" ] || [ $((now_ms - cache_ts)) -ge "$STALE_MS" ]; then
+if [ ! -f "$USAGE_CACHE" ] || [ -z "$usage_text" ] || [ $((now_ms - cache_ts)) -ge "$REFRESH_MS" ]; then
   (nohup "$USAGE_REFRESH" >/dev/null 2>&1 &) >/dev/null 2>&1
 fi
 

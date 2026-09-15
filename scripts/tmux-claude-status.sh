@@ -19,12 +19,23 @@ if [ -x "$SCRIPT_DIR/tmux-claude-refresh.sh" ]; then
 fi
 
 usage_text=""
+cache_ts=0
 if [ -f "$USAGE_CACHE" ]; then
-  usage_text=$(jq -r '.text // empty' "$USAGE_CACHE" 2>/dev/null | sed 's/^credits //')
+  IFS=$'\t' read -r cache_ts usage_text < <(
+    jq -r '[.ts // 0, (.text // "")] | @tsv' "$USAGE_CACHE" 2>/dev/null || printf '0\t\n'
+  )
+  usage_text="${usage_text#credits }"
 fi
 
+# Age of the cached value, shown to the left of the metric (e.g. "(4m)").
+age=$(tmux_usage_format_age "$cache_ts" || true)
+
 if [ -n "$usage_text" ]; then
-  printf "📊 %s" "$usage_text"
+  if [ -n "$age" ]; then
+    printf "📊 (%s) %s" "$age" "$usage_text"
+  else
+    printf "📊 %s" "$usage_text"
+  fi
 else
   printf "📊 ⚙️ loading..."
 fi

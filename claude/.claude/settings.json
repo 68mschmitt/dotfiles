@@ -1,12 +1,11 @@
 {
-  "permissions": {
-    "defaultMode": "default"
-  },
-  "model": "opus[1m]",
   "attribution": {
     "commit": "",
     "pr": "",
     "sessionUrl": false
+  },
+  "permissions": {
+    "defaultMode": "default"
   },
   "enableWorkflows": false,
   "workflowKeywordTriggerEnabled": false,
@@ -23,8 +22,9 @@
     }
   },
   "effortLevel": "high",
-  "promptSuggestionEnabled": false,
+  "promptSuggestionEnabled": true,
   "awaySummaryEnabled": false,
+  "askUserQuestionTimeout": "never",
   "autoMemoryEnabled": false,
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,

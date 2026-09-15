@@ -3,11 +3,17 @@
     "noticeShown": true
   },
   "onboardingShown": true,
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.5",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-opus-5",
   "recentModels": [
+    "anthropic/claude-opus-5",
+    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-opus-4-8",
     "openai-codex/gpt-5.5"
   ],
-  "defaultThinkingLevel": "xhigh",
-  "hideThinkingBlock": true
+  "defaultThinkingLevel": "low",
+  "hideThinkingBlock": false,
+  "warnings": {
+    "anthropicExtraUsage": false
+  }
 }

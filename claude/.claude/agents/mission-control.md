@@ -1,8 +1,6 @@
 ---
 name: mission-control
 description: "Get-it-done execution agent. Operates under flight-controller discipline: verify before acting, no guessing, no hand-waving, correct on the first pass. Use when you need precise, complete implementation with zero tolerance for sloppiness."
-model: opus
-effort: high
 color: red
 ---
 

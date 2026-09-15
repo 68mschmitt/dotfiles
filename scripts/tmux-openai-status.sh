@@ -19,6 +19,7 @@ if [ -x "$SCRIPT_DIR/tmux-openai-refresh.sh" ]; then
 fi
 
 usage_text=""
+cache_ts=0
 if [ -f "$CACHE" ]; then
   primary_remaining=""
   primary_reset_at=""
@@ -67,8 +68,15 @@ if [ -f "$CACHE" ]; then
   fi
 fi
 
+# Age of the cached value, shown to the left of the metric (e.g. "(4m)").
+age=$(tmux_usage_format_age "$cache_ts" || true)
+
 if [ -n "$usage_text" ]; then
-  printf 'OpenAI %s' "$usage_text"
+  if [ -n "$age" ]; then
+    printf 'OpenAI (%s) %s' "$age" "$usage_text"
+  else
+    printf 'OpenAI %s' "$usage_text"
+  fi
 else
   printf 'OpenAI ⚙️ loading...'
 fi

@@ -1,0 +1,28 @@
+# tmux AI usage: refresh interval configuration
+#
+# Copy this file to one of the following locations (checked in this order) and
+# uncomment what you need. It is sourced as a shell fragment.
+#
+#   ${XDG_CONFIG_HOME:-$HOME/.config}/tmux-usage/config
+#   <this directory>/tmux-usage.conf
+#
+# Or point TMUX_USAGE_CONFIG at an explicit path. Environment variables of the
+# same name always take precedence over this file, e.g.
+#
+#   TMUX_USAGE_REFRESH_SECONDS=300 ./tmux-claude-refresh.sh
+#
+# How stale a cached metric may get before a background refresh is triggered.
+# Applies to every provider. Default: 120 seconds.
+#TMUX_USAGE_REFRESH_SECONDS=120
+
+# Optional per-provider overrides; each wins over the shared value above.
+#TMUX_USAGE_CLAUDE_REFRESH_SECONDS=120
+#TMUX_USAGE_OPENAI_REFRESH_SECONDS=120
+#
+# Notes:
+#   - This is the API poll interval, not the status-line redraw interval. The
+#     redraw cadence is `set -g status-interval` in tmux.conf (currently 10s)
+#     and never performs network I/O.
+#   - Both usage endpoints are undocumented and rate-limit hard. After a 429
+#     both providers freeze fetching for 15 minutes regardless of this setting.
+#   - Non-numeric or non-positive values are ignored in favour of the default.
