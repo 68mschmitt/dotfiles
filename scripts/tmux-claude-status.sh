@@ -25,6 +25,10 @@ if [ -f "$USAGE_CACHE" ]; then
     jq -r '[.ts // 0, (.text // "")] | @tsv' "$USAGE_CACHE" 2>/dev/null || printf '0\t\n'
   )
   usage_text="${usage_text#credits }"
+  # Keep only the percent-usage portion, e.g. "$387.99/$750 (52%)" -> "52%".
+  if [[ "$usage_text" =~ \(([0-9]+%)\) ]]; then
+    usage_text="${BASH_REMATCH[1]}"
+  fi
 fi
 
 # Age of the cached value, shown to the left of the metric (e.g. "(4m)").
@@ -32,10 +36,10 @@ age=$(tmux_usage_format_age "$cache_ts" || true)
 
 if [ -n "$usage_text" ]; then
   if [ -n "$age" ]; then
-    printf "📊 (%s) %s" "$age" "$usage_text"
+    printf "📊 (%s) %s" "$age" "$usage_text Claude"
   else
-    printf "📊 %s" "$usage_text"
+    printf "📊 %s" "$usage_text Claude"
   fi
 else
-  printf "📊 ⚙️ loading..."
+  printf "📊 ⚙️ loading... Claude"
 fi

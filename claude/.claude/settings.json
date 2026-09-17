@@ -7,7 +7,6 @@
   "permissions": {
     "defaultMode": "default"
   },
-  "enableWorkflows": false,
   "workflowKeywordTriggerEnabled": false,
   "statusLine": {
     "type": "command",
@@ -21,16 +20,20 @@
       }
     }
   },
+  "outputStyle": "Concise",
   "effortLevel": "high",
-  "promptSuggestionEnabled": true,
+  "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
   "askUserQuestionTimeout": "never",
   "autoMemoryEnabled": false,
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
+  "theme": "dark",
   "editorMode": "normal",
   "verbose": false,
   "autoCompactEnabled": false,
   "switchModelsOnFlag": false,
-  "useAutoModeDuringPlan": true
+  "crossSessionInbound": "accept",
+  "useAutoModeDuringPlan": true,
+  "enableWorkflows": false
 }
