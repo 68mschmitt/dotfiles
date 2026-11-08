@@ -213,6 +213,24 @@ Terminal multiplexer configuration:
 - Claude/OpenAI usage segments that render only when host auth is present
 - Image support for Neovim
 
+The OpenAI metric prefers a local **Codex CLI** ChatGPT login when Codex and
+Python 3 are installed. Run `codex login` and sign in to the same Plus/Pro account
+you use in OpenCode. Quotas come from Codex's `account/rateLimits/read` API, which
+refreshes its own OAuth credentials; no model requests are made. OpenCode's native
+**Sign in with ChatGPT** token cannot read the legacy quota endpoint, and OpenCode
+V2 no longer updates its old `auth.json` file.
+
+Usage is cached in `$CODEX_HOME/.tmux-openai-usage-cache.json` (default
+`~/.codex/.tmux-openai-usage-cache.json`) and refreshed in the background every two
+minutes while the bar is visible. An expired/rejected login shows **OpenAI login
+required** instead of old percentages; run `codex login` again to reconnect.
+There are no hard-coded Plus/Pro allowances. Hosts without a Codex login retain
+the legacy OpenCode/pi OAuth integration. `OPENAI_AUTH_PATH` or `PI_AUTH_PATH`
+explicitly selects that legacy integration; `OPENAI_USAGE_CACHE_PATH` overrides
+the cache location for either source.
+
+Offline regression tests: `python3 -m unittest discover -s scripts/tests`.
+
 ## Scripts
 
 ### Wallpaper Scripts

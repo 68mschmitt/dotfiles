@@ -34,7 +34,7 @@ tmux_usage_to_ms() {
 }
 
 tmux_usage_lock_mtime() {
-  stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null || printf '0\n'
+  stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || printf '0\n'
 }
 
 tmux_usage_format_duration() {
@@ -178,6 +178,23 @@ tmux_usage_opencode_data_dir() {
   printf '%s\n' "${OPENCODE_DATA_DIR:-$HOME/.local/share/opencode}"
 }
 
+tmux_usage_codex_home() {
+  printf '%s\n' "${CODEX_HOME:-$HOME/.codex}"
+}
+
+tmux_usage_use_codex() {
+  # Explicit legacy credential paths still take precedence. Otherwise let Codex
+  # own OAuth refreshes instead of reading OpenCode V2's obsolete auth.json.
+  [ -z "${OPENAI_AUTH_PATH:-}${PI_AUTH_PATH:-}" ] || return 1
+  tmux_usage_have_jq || return 1
+  command -v codex >/dev/null 2>&1 || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+  local auth_path
+  auth_path="$(tmux_usage_codex_home)/auth.json"
+  [ -f "$auth_path" ] || return 1
+  jq -e '.tokens.access_token | type == "string" and length > 0' "$auth_path" >/dev/null 2>&1
+}
+
 tmux_usage_openai_auth_path() {
   if [ -n "${OPENAI_AUTH_PATH:-}" ]; then
     printf '%s\n' "$OPENAI_AUTH_PATH"
@@ -193,6 +210,8 @@ tmux_usage_openai_auth_path() {
 tmux_usage_openai_cache_path() {
   if [ -n "${OPENAI_USAGE_CACHE_PATH:-}" ]; then
     printf '%s\n' "$OPENAI_USAGE_CACHE_PATH"
+  elif tmux_usage_use_codex; then
+    printf '%s/.tmux-openai-usage-cache.json\n' "$(tmux_usage_codex_home)"
   elif [ "$(tmux_usage_openai_auth_path)" = "$(tmux_usage_opencode_data_dir)/auth.json" ]; then
     printf '%s/.openai-usage-cache.json\n' "$(tmux_usage_opencode_data_dir)"
   else
@@ -231,6 +250,7 @@ tmux_usage_read_openai_credential() {
 }
 
 tmux_usage_has_openai_auth() {
+  tmux_usage_use_codex && return 0
   local token="" account_id=""
   IFS=$'\t' read -r token account_id < <(tmux_usage_read_openai_credential || true)
   [ -n "$token" ] && [ -n "$account_id" ]

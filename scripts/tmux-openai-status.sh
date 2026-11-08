@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tmux status line component for OpenAI usage.
-# Displays nothing unless host-local OpenAI OAuth credentials are available.
+# Displays nothing unless host-local Codex/OpenAI OAuth credentials are available.
 
 set -uo pipefail
 
@@ -18,6 +18,11 @@ if [ -x "$SCRIPT_DIR/tmux-openai-refresh.sh" ]; then
   (nohup "$SCRIPT_DIR/tmux-openai-refresh.sh" >/dev/null 2>&1 &) >/dev/null 2>&1
 fi
 
+if [ -f "$CACHE" ] && jq -e '.error == "auth_required"' "$CACHE" >/dev/null 2>&1; then
+  printf 'OpenAI login required'
+  exit 0
+fi
+
 usage_text=""
 cache_ts=0
 if [ -f "$CACHE" ]; then
@@ -27,10 +32,11 @@ if [ -f "$CACHE" ]; then
   weekly_reset_at=""
   last_refresh=0
   IFS=$'\t' read -r last_refresh primary_remaining primary_reset_at weekly_remaining weekly_reset_at < <(
-    jq -r '[.ts // 0, .meters.primary.remainingPercent // "", .meters.primary.resetAtMs // "", .meters.weekly.remainingPercent // "", .meters.weekly.resetAtMs // ""] | @tsv' "$CACHE" 2>/dev/null || true
+    # Nonempty placeholders prevent Bash from collapsing absent tab fields.
+    jq -r '[.ts // 0, .meters.primary.remainingPercent // "missing", .meters.primary.resetAtMs // 0, .meters.weekly.remainingPercent // "missing", .meters.weekly.resetAtMs // 0] | @tsv' "$CACHE" 2>/dev/null || true
   )
 
-  if [ -n "$primary_remaining" ]; then
+  if [ -n "$primary_remaining" ] && [ "$primary_remaining" != "missing" ]; then
     primary_pct=$(awk -v n="$primary_remaining" 'BEGIN { if (n < 0) n = 0; if (n > 100) n = 100; printf "%.0f", n }')
     primary_text="${primary_pct}%"
     primary_reset_at=$(tmux_usage_to_ms "$primary_reset_at")
@@ -43,7 +49,7 @@ if [ -f "$CACHE" ]; then
     usage_text="$primary_text"
   fi
 
-  if [ -n "$weekly_remaining" ]; then
+  if [ -n "$weekly_remaining" ] && [ "$weekly_remaining" != "missing" ]; then
     weekly_pct=$(awk -v n="$weekly_remaining" 'BEGIN { if (n < 0) n = 0; if (n > 100) n = 100; printf "%.0f", n }')
     weekly_text="${weekly_pct}%"
     weekly_reset_at=$(tmux_usage_to_ms "$weekly_reset_at")
