@@ -12,7 +12,6 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 USAGE_URL="https://chatgpt.com/backend-api/wham/usage"
 CACHE="$(tmux_usage_openai_cache_path)"
 LOCK="$CACHE.lock"
-<<<<<<< Updated upstream
 # Configurable; see tmux_usage_refresh_seconds in tmux-usage-lib.sh.
 REFRESH_MS=$(tmux_usage_refresh_ms openai)
 # A missing metric or an elapsed quota window may retry ahead of the normal
@@ -20,10 +19,6 @@ REFRESH_MS=$(tmux_usage_refresh_ms openai)
 # interval itself, whichever is shorter.
 MIN_INTERVAL_MS="$REFRESH_MS"
 if [ "$MIN_INTERVAL_MS" -gt 60000 ]; then MIN_INTERVAL_MS=60000; fi
-=======
-MIN_INTERVAL_MS=60000
-STALE_MS=120000
->>>>>>> Stashed changes
 COOLDOWN_429_MS=900000
 FETCH_TIMEOUT=8
 LOCK_STALE=60
@@ -72,7 +67,7 @@ if [ "$has_meters" = "1" ] && {
   reset_passed=1
 fi
 
-if [ "$has_meters" = "1" ] && [ "$reset_passed" = "0" ] && [ "$age" -lt "$STALE_MS" ]; then
+if [ "$has_meters" = "1" ] && [ "$reset_passed" = "0" ] && [ "$age" -lt "$REFRESH_MS" ]; then
   exit 0
 fi
 if [ $((now_ms - last_attempt)) -lt "$MIN_INTERVAL_MS" ]; then
