@@ -325,8 +325,14 @@ func applyRift(_ ws: [[String: Any]], _ mode: String) {
 
 // MARK: - Event dispatch
 
+func isPart(_ item: String, of owner: String) -> Bool {
+    !owner.isEmpty && (item == owner || item.hasPrefix(owner + "."))
+}
+
+let debug = ProcessInfo.processInfo.environment["BARSD_DEBUG"] != nil
 func dispatch(_ env: [String: String]) {
     let name = env["NAME"] ?? "", sender = env["SENDER"] ?? ""
+    if debug { FileHandle.standardError.write("\(Date().timeIntervalSince1970) \(name) \(sender) open=\(popupOpen())\n".data(using: .utf8)!) }
     if name == "barsd" {   // internal commands from bar_notify
         switch sender {
         case "rift": scheduleRift()
@@ -340,13 +346,20 @@ func dispatch(_ env: [String: String]) {
         return
     }
     switch sender {
+    // The open popup's owner and its rows count as "inside": entering one
+    // pauses the auto-close timer, leaving one restarts it (the bar's
+    // exited.global has already fired once the mouse is in the popup).
     case "mouse.entered":
-        cancelPopupTimer(); hover(name, true)
+        let open = popupOpen()
+        if isPart(name, of: open) || isPart(name, of: "toast") { cancelPopupTimer() }
+        hover(name, true)
         if scriptHover.contains(name) { spawnScript(name, env) }
     case "mouse.exited":
         hover(name, false)
         if scriptHover.contains(name) { spawnScript(name, env) }
-        if name == "toast" || name.hasPrefix("toast.row.") { armPopup("toast", after: popupClose) }
+        let open = popupOpen()
+        if isPart(name, of: "toast") { armPopup("toast", after: popupClose) }
+        else if isPart(name, of: open) { armPopup(open, after: popupClose) }
     case "mouse.exited.global":
         if popupOpen() == name { armPopup(name, after: popupClose) }
     case "mouse.clicked":

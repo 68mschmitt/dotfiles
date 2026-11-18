@@ -240,7 +240,7 @@ sketchybar --add slider volume.slider popup.volume 220 \
                  slider.background.corner_radius=3 slider.background.color=0xff363a4f \
                  slider.knob= slider.knob.font="Hack Nerd Font:Bold:14.0" slider.knob.drawing=on \
                  padding_left=10 padding_right=10 icon=󰕾 icon.padding_left=10 \
-           --subscribe volume.slider mouse.clicked
+           --subscribe volume.slider mouse.clicked "${hover[@]}"
 route volume.slider volume_slider.sh
 add_rows volume 10
 
@@ -271,15 +271,17 @@ sketchybar --add item media right \
                  popup.horizontal=on popup.height=56 \
            --subscribe media mouse.scrolled "${popup_owner[@]}" \
            --add bracket media_island media --set media_island "${island[@]}"
-route media media.sh; route media.prev; route media.play; route media.next
+route media media.sh
+for m in art app info prev play next time; do route media.$m; done
 ctl=(icon.font="Hack Nerd Font:Bold:20.0" icon.padding_left=6 icon.padding_right=6 label.drawing=off)
 sketchybar --add item media.art popup.media --set media.art drawing=off width=48 padding_left=8 \
                  background.drawing=on background.height=44 background.corner_radius=6 \
                  background.image.corner_radius=6 icon.drawing=off label.drawing=off \
+           --subscribe media.art "${hover[@]}" \
            --add item media.app popup.media --set media.app icon.font="sketchybar-app-font:Regular:16.0" \
-                 label.drawing=off icon.padding_left=8 \
+                 label.drawing=off icon.padding_left=8 --subscribe media.app "${hover[@]}" \
            --add item media.info popup.media --set media.info icon.drawing=off label.max_chars=34 \
-                 label.font="Hack Nerd Font:Bold:13.0" \
+                 label.font="Hack Nerd Font:Bold:13.0" --subscribe media.info "${hover[@]}" \
            --add item media.prev popup.media --set media.prev "${ctl[@]}" icon=󰒮 \
                  click_script="media-control previous-track" --subscribe media.prev "${hover[@]}" \
            --add item media.play popup.media --set media.play "${ctl[@]}" icon=󰐊 \
@@ -287,7 +289,8 @@ sketchybar --add item media.art popup.media --set media.art drawing=off width=48
            --add item media.next popup.media --set media.next "${ctl[@]}" icon=󰒭 \
                  click_script="media-control next-track" --subscribe media.next "${hover[@]}" \
            --add item media.time popup.media --set media.time icon.drawing=off label.color=$GREY \
-                 label.font="Hack Nerd Font:Regular:12.0" label.padding_right=12
+                 label.font="Hack Nerd Font:Regular:12.0" label.padding_right=12 \
+           --subscribe media.time "${hover[@]}"
 
 ##### Power-aware driver #####
 # Starts the C providers and retunes polling for AC / battery / Low Power Mode.
