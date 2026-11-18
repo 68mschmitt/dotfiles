@@ -21,9 +21,9 @@ append_segment() {
 if [ -x "$SCRIPT_DIR/tmux-claude-status.sh" ]; then
   append_segment "$("$SCRIPT_DIR/tmux-claude-status.sh" 2>/dev/null || true)"
 fi
-if [ -x "$SCRIPT_DIR/tmux-openai-status.sh" ]; then
-  append_segment "$("$SCRIPT_DIR/tmux-openai-status.sh" 2>/dev/null || true)"
-fi
+# if [ -x "$SCRIPT_DIR/tmux-openai-status.sh" ]; then
+#   append_segment "$("$SCRIPT_DIR/tmux-openai-status.sh" 2>/dev/null || true)"
+# fi
 
 if [ -n "$out" ]; then
   printf '%s ' "$out"

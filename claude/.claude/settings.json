@@ -7,10 +7,18 @@
   "permissions": {
     "defaultMode": "default"
   },
+  "model": "opus",
+  "enableWorkflows": false,
   "workflowKeywordTriggerEnabled": false,
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"
+  },
+  "enabledPlugins": {
+    "cc-plugin-you-should-know@builtin": true,
+    "agent-flow@claude-agent-flow": true,
+    "frontend-design@anthropic-plugin-directory": true,
+    "claude-queue@claude-queue-plugin": true
   },
   "extraKnownMarketplaces": {
     "i-have-adhd": {
@@ -18,13 +26,43 @@
         "source": "github",
         "repo": "michael-a-schmitt/i-have-adhd"
       }
+    },
+    "claude-agent-flow": {
+      "source": {
+        "source": "github",
+        "repo": "Charlie0113-T/claude-agent-flow"
+      }
+    },
+    "claude-queue-plugin": {
+      "source": {
+        "source": "github",
+        "repo": "galElmalah/claude-queue-plugin"
+      }
     }
   },
   "outputStyle": "Concise",
   "effortLevel": "high",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    },
+    "claude-sonnet-5": {
+      "effortLevel": "xhigh"
+    },
+    "claude-sonnet-5-5": {
+      "effortLevel": "high"
+    }
+  },
   "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
   "askUserQuestionTimeout": "never",
+  "pluginConfigs": {
+    "claude-queue@claude-queue-plugin": {
+      "options": {
+        "joined": true
+      }
+    }
+  },
   "autoMemoryEnabled": false,
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
@@ -34,6 +72,5 @@
   "autoCompactEnabled": false,
   "switchModelsOnFlag": false,
   "crossSessionInbound": "accept",
-  "useAutoModeDuringPlan": true,
-  "enableWorkflows": false
+  "useAutoModeDuringPlan": true
 }

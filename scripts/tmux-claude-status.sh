@@ -26,9 +26,9 @@ if [ -f "$USAGE_CACHE" ]; then
   )
   usage_text="${usage_text#credits }"
   # Keep only the percent-usage portion, e.g. "$387.99/$750 (52%)" -> "52%".
-  if [[ "$usage_text" =~ \(([0-9]+%)\) ]]; then
-    usage_text="${BASH_REMATCH[1]}"
-  fi
+  # if [[ "$usage_text" =~ \(([0-9]+%)\) ]]; then
+  #   usage_text="${BASH_REMATCH[1]}"
+  # fi
 fi
 
 # Age of the cached value, shown to the left of the metric (e.g. "(4m)").
