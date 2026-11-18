@@ -23,4 +23,3 @@ export WS_FOCUSED_EMPTY_BG=0x608aadf4
 export WS_VISIBLE_BG=0x40ffffff
 export WS_VISIBLE_EMPTY_BG=0x18ffffff
 
-export MAIN_DISPLAY=1              # arrangement id of the main (built-in) display

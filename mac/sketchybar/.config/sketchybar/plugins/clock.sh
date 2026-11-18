@@ -1,11 +1,5 @@
 #!/bin/bash
-# Centered date + time. Clicking either opens the agenda popup (on "date").
-source "$HOME/.config/sketchybar/plugins/lib.sh"
-handle_hover && exit 0
-if [ "$SENDER" = mouse.clicked ]; then
-  NAME=date "$HOME/.config/sketchybar/plugins/agenda.sh"; exit 0
-fi
-case "$NAME" in
-  date) sketchybar --set "$NAME" label="$(date '+%a %b %-d')" ;;
-  *)    sketchybar --set "$NAME" label="$(date '+%-I:%M %p')" ;;
-esac
+# The clock/date labels are set by barsd; clicking the time opens the agenda
+# popup on the date item.
+[ "$SENDER" = mouse.clicked ] && NAME=date exec "$HOME/.config/sketchybar/plugins/agenda.sh"
+exit 0

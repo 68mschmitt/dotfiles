@@ -11,7 +11,7 @@ This repository contains configuration files for my development environment, inc
 - **Ghostty** - Terminal emulator configuration
 - **Rift** - Tiling window manager for macOS (BSP, animations, no SIP changes) + all hotkeys
 - **SketchyBar** - Menu bar with per-monitor Rift workspace labels and app icons
-- **JankyBorders** - Animated rainbow border on the focused window
+- **JankyBorders** - Accent-coloured border on the focused window
 - **dim-unfocused** - Small Swift helper that dims unfocused windows
 - **Pi** - Coding agent settings, extensions and prompts
 - **Prime Agent** - Agent defaults and status extensions
@@ -141,7 +141,9 @@ Replaces the old yabai + skhd setup. Nothing here needs SIP disabled.
 | `cmd + /` | Flip split orientation |
 | `cmd + shift + arrows` | Resize: the edge moves in the arrow's direction (`resize.sh`) |
 | `cmd + shift + e` / `space` | Balance / toggle float |
-| `cmd + 1-9` / `cmd + shift + 1-9` | Switch to / send window to workspace |
+| `cmd + 1-9` | Switch to workspace |
+| `cmd + shift + 1-9` | Send window to workspace and follow it (target becomes visible on its monitor) |
+| `cmd + ctrl + 1-9` | Send window to workspace and stay: cursor doesn't move, focus goes to the window under it (`move-stay.sh`) |
 | `cmd + tab` | Last workspace |
 | `cmd + ctrl + shift + arrows` | Send window to monitor in that direction |
 | `ctrl + alt + arrows` | Focus monitor in that direction |
@@ -151,27 +153,51 @@ Replaces the old yabai + skhd setup. Nothing here needs SIP disabled.
 | `cmd + alt + d` / `w` | Dictation toggle / whisper mode |
 
 **SketchyBar** (`mac/sketchybar`): rounded "islands" on a solid, theme-coloured
-bar (palette in `colors.sh`). Workspaces, front app, date/time and notification
-bubbles show on every monitor; the other live widgets only on the main
-(built-in) display.
+bar (palette in `colors.sh`). Every island shows identically on every monitor;
+the workspaces island lists the workspaces of the monitor it sits on.
 
 | Island | Contents | Click |
 |---|---|---|
 | Workspaces | per-monitor numbers + app icons (focused = accent, visible = dim, empty = grey) | switch |
-| Rift state | layout (`bsp`), `float` for a floating window, binding mode in orange + front app | Rift actions popup |
-| Date / time | | agenda popup (today + tomorrow, join links) |
+| Rift state | layout (`bsp`), `float` for a floating window, binding mode in orange + front app | workspace windows (click = focus), layout switcher, actions |
+| Date / time | | agenda: today/tomorrow, live meeting in green, one-click join |
 | Meeting | "Standup in 12m" (orange <15m, red <5m), "· 8m left" in green during | join link, right-click agenda |
 | Mic / camera | red mic / green camera while in use | |
-| Badges | red bubble per app with a Dock badge (icon + count); hover = preview of its latest notifications | open app |
-| Now playing | track — artist (grey when paused) | popup with controls, right-click play/pause |
-| System | CPU, memory, free disk, network, volume, battery | top processes / network details / battery health popups |
+| Badges | red bubble per app with a Dock badge (icon + count) | preview of its *unread* notifications (delivered since you last had that app in front) |
+| Toast | new notification (Notification Center or GitHub: review requested, CI failed/passed) = pill + small card popup for 6s, paused while hovered | recent notifications across apps |
+| Now playing | track — artist (grey when paused) | mini-player strip (artwork, prev/play/next, position); right-click play/pause, scroll = skip |
+| GitHub | review requests (yellow when waiting) + your open PRs (icon = worst CI state) | review queue, your PRs with CI/review state (⌥-click = checks), notifications, refresh |
+| AI usage | Claude credits % (+ Codex weekly % when its cache is fresh) | credit meter, Codex 5h/weekly windows with reset times, refresh |
+| System | CPU, memory, free disk, network, volume, battery | CPU/memory/network: live graph + details + top processes (click focuses GUI apps); disk: usage, volumes (⌥-click ejects), Trash; volume: slider, mute, output device switcher (scroll = ±5%); battery: meter, health, energy users |
 
-Everything hovers (accent tint) and animates (`--animate tanh`). How it is fed:
+Everything hovers (accent tint) and animates (`--animate tanh`). Popups open on
+**click only**, one at a time, on the monitor you clicked, and close 2s after
+the mouse leaves the bar/popup (re-entering resets the timer). SketchyBar only
+draws popups on the display with the active menu bar, so `lib.sh` first makes
+the clicked display active: via Rift when it has windows (focus moves there),
+otherwise with a click on its empty desktop (`helpers/bar_display.swift`).
+
+**Notifications in the bar instead of banners:** the toast shows each new
+notification. To stop macOS showing its own banner as well, turn on a Focus
+(e.g. Do Not Disturb) or set each app's alert style to *None* in System
+Settings › Notifications; notifications still land in Notification Center, which
+is what the bar reads.
+
+How it is fed (no shell runs on any hot path):
+- `helpers/barsd/` (**barsd**, Swift + a small C Mach shim): every routed item has
+  `mach_helper=git.felix.barsd`, so SketchyBar sends its events over Mach instead
+  of forking a script. barsd does hover highlight, the popup auto-close timer,
+  Rift workspace labels + Rift state, clock/date, front app (+ "last seen" per
+  app) and Dock badges (Accessibility, in-process) natively, and forks the
+  item's plugin from `~/.cache/sketchybar/routes.tsv` (written by `route` in
+  `sketchybarrc`) only for clicks and rare events. Rift's subscriptions call
+  `helpers/bin/bar_notify rift` (tiny C sender). Started by `sketchybarrc`.
 - `helpers/event_providers/` C daemons (`cpu_load`, `network_load` from
-  FelixKratz/dotfiles, `memory_load` in the same style) push metrics over
-  SketchyBar's Mach port; built by `helpers/makefile` into `helpers/bin/`.
+  FelixKratz/dotfiles, `memory_load` in the same style) set the cpu/memory/
+  network labels, colours and popup graphs directly over SketchyBar's Mach port
+  (local "item" mode); built by `helpers/makefile` into `helpers/bin/`.
 - `plugins/providers.sh` (hidden `power` item) restarts them and retunes
-  polling for **AC / battery / Low Power Mode** (e.g. CPU every 2s / 5s / 10s;
+  polling for **AC / battery / Low Power Mode** (e.g. CPU every 2s / 5s / 10s, GitHub 2m / 5m / 15m;
   animations shorter on battery, off in Low Power Mode). It also follows the
   default network interface.
 - `helpers/bar_events/` (`sketchybar-events` LaunchAgent, Swift): mic/camera
@@ -179,23 +205,25 @@ Everything hovers (accent tint) and animates (`--animate tanh`). How it is fed:
   `~/.cache/sketchybar/agenda.tsv`. Install with
   `~/.config/sketchybar/helpers/bar_events/install.sh`.
 - `plugins/media_stream.sh` follows `media-control stream` (`brew install media-control`).
-- `plugins/badges.sh` reads Dock badges with `helpers/dock_badges.swift`.
 - `helpers/notifications/` (`sketchybar-notifications` LaunchAgent, Swift)
   mirrors Notification Center (read-only usernoted database) into
-  `~/.cache/sketchybar/notifications.tsv` (mode 600) for the hover previews.
+  `~/.cache/sketchybar/notifications.tsv` (mode 600) for previews and toasts.
   Install with `~/.config/sketchybar/helpers/notifications/install.sh`.
-- `plugins/rift_workspaces.sh` (called by Rift events) also sets the Rift state item.
+- `plugins/gh.sh`: one GraphQL query through `gh` (cached in `~/.cache/sketchybar/gh.json`).
+- `plugins/ai.sh`: reads `~/.claude/.usage-cache.json` (refreshed via
+  `scripts/tmux-claude-refresh.sh`, which throttles) and opencode's Codex cache.
+- Popups share `lib.sh fill_popup` (row styles: header, section, muted, action, status).
 
-Permissions: **Accessibility** for `sketchybar` (Dock badges), **Calendars**
+Permissions: **Accessibility** for `sketchybar` (Dock badges, read by barsd), **Calendars**
 for `sketchybar-events`, and **Full Disk Access** for
 `~/.local/bin/sketchybar-notifications` only (notification previews; the
 Notification Center database is FDA-protected). New Outlook keeps its calendar in the cloud, so the
 meeting widget needs the work account added in System Settings > Internet
 Accounts (Calendars on). `plugins/icon_map.sh` comes from sketchybar-app-font v3.0.27.
 
-**JankyBorders** (`mac/borders`): 6pt rounded border on the focused window.
-`rainbow.sh` animates it on AC power and switches to a static gradient on
-battery (`RAINBOW=off` in `bordersrc` to always be static).
+**JankyBorders** (`mac/borders`): 6pt rounded border in the theme accent on the
+focused window. The animated rainbow (`rainbow.sh`) is off (`RAINBOW=on` in
+`bordersrc` brings it back, AC power only).
 
 **dim-unfocused** (`mac/dim-unfocused`): dims unfocused windows only (desktop,
 menu bar, SketchyBar, Dock and notifications stay bright). After stowing, build
@@ -208,7 +236,7 @@ and register the login agent with:
 ```bash
 brew install acsandmann/tap/rift jq
 brew trust felixkratz/formulae
-brew install felixkratz/formulae/sketchybar felixkratz/formulae/borders media-control
+brew install felixkratz/formulae/sketchybar felixkratz/formulae/borders media-control switchaudio-osx
 brew install --cask font-sketchybar-app-font font-hack-nerd-font
 ./stow-dots.sh
 rift service install && rift service start   # grant Accessibility, then: rift service restart

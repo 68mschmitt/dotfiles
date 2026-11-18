@@ -16,14 +16,14 @@ mouse_hides_on_focus = false
 
 hot_reload = true
 
-# Keep sketchybar workspace labels in sync
+# Keep sketchybar workspace labels in sync: Rift pings barsd (tiny C sender, no shell)
 run_on_start = [
   "/Users/michael.schmitt/.config/rift/assign-workspaces.py",
-  "rift-cli subscribe cli --event workspace_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
-  "rift-cli subscribe cli --event windows_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
-  "rift-cli subscribe cli --event focused_window_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
-  "rift-cli subscribe cli --event layout_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
-  "rift-cli subscribe cli --event binding_mode_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
+  "rift-cli subscribe cli --event workspace_changed --command /Users/michael.schmitt/.config/sketchybar/helpers/bin/bar_notify --args rift",
+  "rift-cli subscribe cli --event windows_changed --command /Users/michael.schmitt/.config/sketchybar/helpers/bin/bar_notify --args rift",
+  "rift-cli subscribe cli --event focused_window_changed --command /Users/michael.schmitt/.config/sketchybar/helpers/bin/bar_notify --args rift",
+  "rift-cli subscribe cli --event layout_changed --command /Users/michael.schmitt/.config/sketchybar/helpers/bin/bar_notify --args rift",
+  "rift-cli subscribe cli --event binding_mode_changed --command /Users/michael.schmitt/.config/sketchybar/helpers/bin/bar_notify --args rift",
 ]
 
 [settings.layout]
@@ -107,15 +107,28 @@ workspace_rules = []
 "Meta + 7" = { switch_to_workspace = 6 }
 "Meta + 8" = { switch_to_workspace = 7 }
 "Meta + 9" = { switch_to_workspace = 8 }
-"Meta + Shift + 1" = { move_window_to_workspace = 0 }
-"Meta + Shift + 2" = { move_window_to_workspace = 1 }
-"Meta + Shift + 3" = { move_window_to_workspace = 2 }
-"Meta + Shift + 4" = { move_window_to_workspace = 3 }
-"Meta + Shift + 5" = { move_window_to_workspace = 4 }
-"Meta + Shift + 6" = { move_window_to_workspace = 5 }
-"Meta + Shift + 7" = { move_window_to_workspace = 6 }
-"Meta + Shift + 8" = { move_window_to_workspace = 7 }
-"Meta + Shift + 9" = { move_window_to_workspace = 8 }
+# Send window to workspace and follow it: the target workspace becomes visible
+# (switching to it on its monitor) and keeps focus on the window
+"Meta + Shift + 1" = { exec = ["/opt/homebrew/bin/rift-cli", "execute", "workspace", "move-window", "0", "--follow"] }
+"Meta + Shift + 2" = { exec = ["/opt/homebrew/bin/rift-cli", "execute", "workspace", "move-window", "1", "--follow"] }
+"Meta + Shift + 3" = { exec = ["/opt/homebrew/bin/rift-cli", "execute", "workspace", "move-window", "2", "--follow"] }
+"Meta + Shift + 4" = { exec = ["/opt/homebrew/bin/rift-cli", "execute", "workspace", "move-window", "3", "--follow"] }
+"Meta + Shift + 5" = { exec = ["/opt/homebrew/bin/rift-cli", "execute", "workspace", "move-window", "4", "--follow"] }
+"Meta + Shift + 6" = { exec = ["/opt/homebrew/bin/rift-cli", "execute", "workspace", "move-window", "5", "--follow"] }
+"Meta + Shift + 7" = { exec = ["/opt/homebrew/bin/rift-cli", "execute", "workspace", "move-window", "6", "--follow"] }
+"Meta + Shift + 8" = { exec = ["/opt/homebrew/bin/rift-cli", "execute", "workspace", "move-window", "7", "--follow"] }
+"Meta + Shift + 9" = { exec = ["/opt/homebrew/bin/rift-cli", "execute", "workspace", "move-window", "8", "--follow"] }
+# Send window to workspace but stay: cursor does not move, focus goes to the
+# window under the cursor (move-stay.sh)
+"Meta + Ctrl + 1" = { exec = ["/Users/michael.schmitt/.config/rift/move-stay.sh", "0"] }
+"Meta + Ctrl + 2" = { exec = ["/Users/michael.schmitt/.config/rift/move-stay.sh", "1"] }
+"Meta + Ctrl + 3" = { exec = ["/Users/michael.schmitt/.config/rift/move-stay.sh", "2"] }
+"Meta + Ctrl + 4" = { exec = ["/Users/michael.schmitt/.config/rift/move-stay.sh", "3"] }
+"Meta + Ctrl + 5" = { exec = ["/Users/michael.schmitt/.config/rift/move-stay.sh", "4"] }
+"Meta + Ctrl + 6" = { exec = ["/Users/michael.schmitt/.config/rift/move-stay.sh", "5"] }
+"Meta + Ctrl + 7" = { exec = ["/Users/michael.schmitt/.config/rift/move-stay.sh", "6"] }
+"Meta + Ctrl + 8" = { exec = ["/Users/michael.schmitt/.config/rift/move-stay.sh", "7"] }
+"Meta + Ctrl + 9" = { exec = ["/Users/michael.schmitt/.config/rift/move-stay.sh", "8"] }
 "Alt + Tab" = "switch_to_last_workspace"
 
 # App launchers, wallpaper, dictation

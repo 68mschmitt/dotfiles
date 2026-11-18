@@ -1,5 +1,7 @@
 #!/bin/bash
-# Battery level/charging (event + slow poll); click = time left, health, power mode.
+# Battery level/charging (event + slow poll).
+# Popup: charge meter, time left, health/cycles, power source, top energy users,
+# Low Power Mode state, battery settings.
 source "$HOME/.config/sketchybar/plugins/lib.sh"
 handle_hover && exit 0
 BATT="$(pmset -g batt)"
@@ -9,19 +11,31 @@ PCT="$(grep -Eo '[0-9]+%' <<< "$BATT" | head -1 | tr -d %)"
 if [ "$SENDER" = mouse.clicked ]; then
   state="$(awk -F'; ' 'NR==2 {print $2}' <<< "$BATT")"
   left="$(grep -Eo '[0-9]+:[0-9]+ remaining' <<< "$BATT")"
+  [ "$left" = "0:00 remaining" ] && left=""
+  [ -z "$left" ] && grep -qi 'charged' <<< "$BATT" && left="fully charged"
   src="$(head -1 <<< "$BATT" | grep -Eo "'.*'" | tr -d "'")"
   io="$(ioreg -rn AppleSmartBattery)"
-  cycles="$(awk '/"CycleCount" =/ {print $3; exit}' <<< "$io")"
-  maxc="$(awk '/"AppleRawMaxCapacity" =/ {print $3; exit}' <<< "$io")"
-  design="$(awk '/"DesignCapacity" =/ {print $3; exit}' <<< "$io")"
+  num() { grep -Eo "\"$1\" ?= ?[0-9]+" <<< "$io" | head -1 | grep -Eo '[0-9]+$'; }
+  cycles="$(num CycleCount)"; maxc="$(num AppleRawMaxCapacity)"; design="$(num DesignCapacity)"
   health="–"; [ -n "$maxc" ] && [ -n "$design" ] && [ "$design" -gt 0 ] && health="$((maxc * 100 / design))%"
   lpm="off"; [ "$(pmset -g | awk '/lowpowermode/ {print $2}')" = 1 ] && lpm="on"
-  printf '%s\t%s\t%s\n' \
-    󰂄 "${PCT}% · ${state:-unknown}" "open 'x-apple.systempreferences:com.apple.Battery-Settings.extension'" \
-    󰔟 "${left:-No estimate}" "" \
-    󰚥 "Source: ${src:-?}" "" \
-    󰁹 "Health ${health} · ${cycles:-?} cycles" "" \
-    󰌪 "Low Power Mode ${lpm}" "" | fill_popup "$NAME" 5
+  st=g; [ "$PCT" -le 50 ] && st=y; [ "$PCT" -le 20 ] && st=x
+  settings="open 'x-apple.systempreferences:com.apple.Battery-Settings.extension'"
+  rows() { # $1 = energy lines (or a placeholder)
+    printf '󰂄\tBattery %s%% · %s\t%s\th\n' "$PCT" "${state:-unknown}" "$settings"
+    printf '󰁹\t%s  %s\t\t%s\n' "$(meter "$PCT" 16)" "${left:-no estimate}" "$st"
+    printf '󰚥\t%s · Low Power Mode %s · profile %s\t\tm\n' "${src:-?}" "$lpm" "$(power_profile)"
+    printf '󰁹\tHealth %s · %s cycles\t\tm\n' "$health" "${cycles:-?}"
+    printf '\tUSING SIGNIFICANT ENERGY\t\ts\n'
+    printf '%s\n' "$1"
+    printf '\tBattery settings\t%s\ta\n' "$settings"
+  }
+  rows "$(printf '󰔟\tsampling…\t\tm')" | fill_popup "$NAME" 10
+  [ "$(sketchybar --query "$NAME" | jq -r .popup.drawing)" = on ] || exit 0
+  # top's power column over a 1s sample (second block), skipping top itself
+  energy="$(top -l 2 -s 1 -n 10 -o power -stats power,command 2>/dev/null |
+    awk '/^POWER/ {blk++; next} blk == 2 && NF >= 2 && $1+0 > 1 && $2 != "top" {printf "󰚥\t%5.1f  %s\topen -a \"Activity Monitor\"\tr\n", $1, $2}' | head -4)"
+  rows "${energy:-$(printf '󰄬\tnothing notable\t\tg')}" | fill_popup "$NAME" 10 keep
   exit 0
 fi
 

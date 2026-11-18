@@ -4,14 +4,17 @@
 #   center  date + time | next meeting, mic/cam in use | Dock badge bubbles (all monitors,
 #           hover = notification preview)
 #   right   now playing | cpu, memory, disk, network, volume, battery
-# Workspaces, front app, date/time and the badge bubbles are drawn on every
-# monitor; the other live widgets sit on the main (built-in) display ($MAIN_DISPLAY).
-# Metrics come from C event providers (helpers/event_providers, restarted by
-# plugins/providers.sh with intervals tuned to AC / battery / Low Power Mode).
+# Every island is drawn identically on every monitor (workspaces show the
+# workspaces of the monitor they sit on).
+# Performance: no item runs a shell script on hot paths. Every item's events go
+# over Mach to helpers/barsd (mach_helper), which does hover, popup auto-close,
+# workspaces, clock, front app and Dock badges natively and only forks the
+# item's plugin (routes.tsv) for clicks and rare events. CPU/memory/network
+# labels are set straight from the C providers (helpers/event_providers).
 
 source "$CONFIG_DIR/colors.sh"
 PLUGIN_DIR="$CONFIG_DIR/plugins"
-MAIN=(display=$MAIN_DISPLAY)
+MAIN=()   # no display= : drawn on every monitor
 
 ##### Bar #####
 sketchybar --bar position=top height=40 y_offset=0 margin=0 corner_radius=0 \
@@ -62,6 +65,16 @@ sketchybar --add event cpu_update --add event memory_update --add event network_
 hover=(mouse.entered mouse.exited)
 popup_owner=(mouse.clicked mouse.entered mouse.exited mouse.exited.global)
 
+# route <item> [plugin] [hover]: hand <item>'s events to barsd, which runs
+# <plugin> for clicks / non-native events ("hover" = also pass hover events on).
+STATE="$HOME/.cache/sketchybar"; mkdir -p "$STATE"; : > "$STATE/routes.tsv"
+route() { printf '%s\t%s\t%s\n' "$1" "${2:+$PLUGIN_DIR/$2}" "$3" >> "$STATE/routes.tsv"; }
+
+# barsd must be registered before items point at it; it attaches mach_helper
+# to every routed item itself once the items exist (see Start).
+pkill -x barsd 2>/dev/null
+make -s -C "$CONFIG_DIR/helpers" >/dev/null 2>&1
+
 # add_rows <parent> <count>: hidden popup rows <parent>.row.N, filled by lib.sh fill_popup
 # (one sketchybar call per popup; optional 3rd arg = extra row properties)
 add_rows() {
@@ -70,16 +83,16 @@ add_rows() {
     rows+=(--add item "$1.row.$r" popup."$1"
            --set "$1.row.$r" drawing=off icon.font="Hack Nerd Font:Bold:14.0"
                  label.font="Hack Nerd Font:Regular:13.0" icon.padding_left=10
-                 label.padding_right=12 background.height=24 $3
-                 script="$PLUGIN_DIR/hover.sh"
+                 label.padding_right=12 background.height=24 scroll_texts=off $3
            --subscribe "$1.row.$r" "${hover[@]}")
+    route "$1.row.$r"
   done
   sketchybar "${rows[@]}"
 }
 
 ##### Left: workspaces #####
 # Rift virtual workspaces (global numbering: 1-3 built-in, 4-6 / 7-9 externals
-# left-to-right). plugins/rift_workspaces.sh (called by Rift) sets highlight,
+# left-to-right). barsd (notified by Rift via `bar_notify rift`) sets highlight,
 # app icons and which monitor shows each label.
 for sid in 1 2 3 4 5 6 7 8 9
 do
@@ -96,16 +109,17 @@ do
     label.y_offset=-1
     padding_left=2
     padding_right=2
-    script="$PLUGIN_DIR/hover.sh"
     click_script="rift-cli execute workspace switch $(($sid-1))"
   )
   sketchybar --add item rift.ws."$sid" left --set rift.ws."$sid" "${ws[@]}" \
              --subscribe rift.ws."$sid" "${hover[@]}"
+  route rift.ws."$sid"
 done
 sketchybar --add bracket workspaces '/rift\.ws\..*/' --set workspaces "${island[@]}"
 
-# Hidden drivers: initial workspace sync, monitor re-assignment
-sketchybar --add item rift_sync left --set rift_sync drawing=off script="$PLUGIN_DIR/rift_workspaces.sh" \
+# Hidden drivers: barsd's global events, monitor re-assignment
+sketchybar --add item barsd.events left --set barsd.events drawing=off updates=on \
+           --subscribe barsd.events display_change system_woke \
            --add item rift_displays left \
            --set rift_displays drawing=off updates=on script="$HOME/.config/rift/assign-workspaces.py" \
            --subscribe rift_displays display_change
@@ -113,42 +127,42 @@ sketchybar --add item rift_sync left --set rift_sync drawing=off script="$PLUGIN
 ##### Left: rift state + front app #####
 sketchybar --add item rift_state left \
            --set rift_state "${MAIN[@]}" icon=󰕰 label=bsp icon.padding_left=10 \
-                 label.font="Hack Nerd Font:Bold:12.0" script="$PLUGIN_DIR/rift_state.sh" \
+                 label.font="Hack Nerd Font:Bold:12.0" \
            --subscribe rift_state "${popup_owner[@]}" \
            --add item front_app left \
            --set front_app icon.drawing=off label.padding_left=8 label.padding_right=10 \
-                 script="$PLUGIN_DIR/front_app.sh" \
            --subscribe front_app front_app_switched \
            --add bracket left_info rift_state front_app --set left_info "${island[@]}"
-add_rows rift_state 6
+route barsd.events; route rift_state rift_state.sh; route front_app
+add_rows rift_state 20 label.max_chars=72
 
 ##### Center: date + time | meeting + mic/cam #####
 sketchybar --add item date center \
-           --set date update_freq=60 icon=󰃭 icon.padding_left=10 script="$PLUGIN_DIR/clock.sh" \
-           --subscribe date system_woke "${popup_owner[@]}" \
+           --set date icon=󰃭 icon.padding_left=10 \
+           --subscribe date "${popup_owner[@]}" \
            --add item clock center \
-           --set clock update_freq=10 icon= label.padding_right=10 script="$PLUGIN_DIR/clock.sh" \
-           --subscribe clock system_woke mouse.clicked "${hover[@]}" \
+           --set clock icon= label.padding_right=10 \
+           --subscribe clock mouse.clicked "${hover[@]}" \
            --add bracket datetime date clock --set datetime "${island[@]}"
-add_rows date 10
+route date agenda.sh; route clock clock.sh
+add_rows date 14 label.max_chars=80
 
 sketchybar --add item meeting center \
            --set meeting "${MAIN[@]}" drawing=off update_freq=30 icon=󰃰 icon.padding_left=10 \
-                 label.padding_right=10 script="$PLUGIN_DIR/meeting.sh" \
+                 label.padding_right=10 \
            --subscribe meeting calendar_update system_woke mouse.clicked "${hover[@]}" \
            --add item av.mic center \
            --set av.mic "${MAIN[@]}" drawing=off icon=󰍬 icon.color=$RED label.drawing=off \
-                 script="$PLUGIN_DIR/av.sh" \
            --subscribe av.mic av_update \
            --add item av.cam center \
            --set av.cam "${MAIN[@]}" drawing=off icon=󰄀 icon.color=$GREEN label.drawing=off \
                  icon.padding_right=8 \
            --add bracket meeting_island meeting av.mic av.cam --set meeting_island "${island[@]}"
+route meeting meeting.sh; route av.mic av.sh
 
 # Notification bubbles: one red pill (app icon + count) per app with a Dock
-# badge, on every monitor. Hover = preview of that app's notifications
-# (helpers/notifications agent), click = open the app. The hidden "badges"
-# item drives badge.1..6.
+# badge, on every monitor (filled by barsd). Click = preview of that app's
+# unread notifications (helpers/notifications agent).
 for i in 1 2 3 4 5 6
 do
   badge=(
@@ -164,64 +178,116 @@ do
     background.color=$BADGE_RED
     background.corner_radius=11
     background.height=24
-    script="$PLUGIN_DIR/badges.sh"
   )
   sketchybar --add item badge."$i" center --set badge."$i" "${badge[@]}" \
              --subscribe badge."$i" "${popup_owner[@]}"
-  add_rows badge."$i" 6 label.max_chars=96
+  route badge."$i" badges.sh
+  add_rows badge."$i" 8 label.max_chars=80
 done
-sketchybar --add item badges center \
-           --set badges drawing=off updates=on update_freq=3 script="$PLUGIN_DIR/badges.sh" \
-           --subscribe badges front_app_switched system_woke
+
+# New-notification toast (all monitors): a pill plus a small card popup with the
+# notification for a few seconds (Notification Center via
+# sketchybar-notifications, and GitHub events from gh.sh). Click = recent list.
+sketchybar --add item toast center \
+           --set toast drawing=off updates=on icon.font="sketchybar-app-font:Regular:14.0" \
+                 icon.padding_left=10 label.padding_right=12 label.max_chars=64 scroll_texts=off \
+                 label.font="Hack Nerd Font:Bold:12.0" background.color=0xff363a4f \
+                 background.border_color=$ACCENT background.border_width=1 \
+                 background.corner_radius=11 background.height=24 \
+           --subscribe toast notifications_update "${popup_owner[@]}"
+route toast toast.sh
+add_rows toast 10 label.max_chars=60
 
 ##### Right: system metrics (added right-to-left) #####
+# Every metric has a click popup ("mini app"); cpu/memory/network popups start
+# with a live history graph fed by the providers.
 sketchybar --add item battery right \
-           --set battery "${MAIN[@]}" update_freq=120 label.padding_right=10 script="$PLUGIN_DIR/battery.sh" \
+           --set battery "${MAIN[@]}" update_freq=120 label.padding_right=10 \
            --subscribe battery system_woke power_source_change "${popup_owner[@]}" \
            --add item volume right \
-           --set volume "${MAIN[@]}" script="$PLUGIN_DIR/volume.sh" \
-           --subscribe volume volume_change mouse.clicked "${hover[@]}" \
+           --set volume "${MAIN[@]}" \
+           --subscribe volume volume_change mouse.scrolled "${popup_owner[@]}" \
            --add item network right \
            --set network "${MAIN[@]}" icon=󰈀 label="↓  0B ↑  0B" label.font="Hack Nerd Font:Bold:12.0" \
-                 script="$PLUGIN_DIR/network.sh" \
-           --subscribe network network_update network_iface "${popup_owner[@]}" \
+           --subscribe network network_iface "${popup_owner[@]}" \
            --add item disk right \
-           --set disk "${MAIN[@]}" update_freq=300 icon=󰋊 script="$PLUGIN_DIR/disk.sh" \
-           --subscribe disk mouse.clicked "${hover[@]}" \
+           --set disk "${MAIN[@]}" update_freq=300 icon=󰋊 \
+           --subscribe disk "${popup_owner[@]}" \
            --add item memory right \
-           --set memory "${MAIN[@]}" icon=󰍛 label=–% script="$PLUGIN_DIR/memory.sh" \
-           --subscribe memory memory_update "${popup_owner[@]}" \
+           --set memory "${MAIN[@]}" icon=󰍛 label=–% \
+           --subscribe memory "${popup_owner[@]}" \
            --add item cpu right \
-           --set cpu "${MAIN[@]}" icon=󰻠 label=–% icon.padding_left=10 script="$PLUGIN_DIR/cpu.sh" \
-           --subscribe cpu cpu_update "${popup_owner[@]}" \
+           --set cpu "${MAIN[@]}" icon=󰻠 label=–% icon.padding_left=10 \
+           --subscribe cpu "${popup_owner[@]}" \
            --add bracket system cpu memory disk network volume battery --set system "${island[@]}"
-add_rows cpu 6
-add_rows memory 6
-add_rows network 4
-add_rows battery 5
+route battery battery.sh; route volume volume.sh; route network network.sh
+route disk disk.sh; route memory memory.sh; route cpu cpu.sh
 
-##### Right: now playing #####
+# add_graph <parent> <color>: history graph at the top of a popup
+add_graph() {
+  sketchybar --add graph "$1.graph" popup."$1" 140 \
+             --set "$1.graph" graph.color="$2" graph.fill_color="${2/0xff/0x40}" graph.line_width=1.5 \
+                   background.height=34 background.color=0x00000000 icon.drawing=off label.drawing=off \
+                   padding_left=8 padding_right=8 y_offset=0
+}
+add_graph cpu $ACCENT;     add_rows cpu 9
+add_graph memory $GREEN;   add_rows memory 10
+add_graph network $ORANGE; add_rows network 7
+add_rows disk 10
+add_rows battery 11
+sketchybar --add slider volume.slider popup.volume 220 \
+           --set volume.slider slider.highlight_color=$ACCENT slider.background.height=6 \
+                 slider.background.corner_radius=3 slider.background.color=0xff363a4f \
+                 slider.knob= slider.knob.font="Hack Nerd Font:Bold:14.0" slider.knob.drawing=on \
+                 padding_left=10 padding_right=10 icon=󰕾 icon.padding_left=10 \
+           --subscribe volume.slider mouse.clicked
+route volume.slider volume_slider.sh
+add_rows volume 10
+
+##### Right: AI usage + GitHub #####
+sketchybar --add item ai right \
+           --set ai "${MAIN[@]}" icon=󰚩 label=–% icon.padding_left=10 label.padding_right=10 \
+                 update_freq=300 \
+           --subscribe ai system_woke "${popup_owner[@]}" \
+           --add bracket ai_island ai --set ai_island "${island[@]}"
+route ai ai.sh
+add_rows ai 10 label.max_chars=72
+
+sketchybar --add item gh.prs right \
+           --set gh.prs "${MAIN[@]}" icon=󰘬 label=– label.padding_right=10 \
+                 update_freq=120 \
+           --subscribe gh.prs system_woke "${popup_owner[@]}" \
+           --add item gh.reviews right \
+           --set gh.reviews "${MAIN[@]}" icon=󰳐 label=– icon.padding_left=10 \
+           --subscribe gh.reviews mouse.clicked "${hover[@]}" \
+           --add bracket gh_island gh.reviews gh.prs --set gh_island "${island[@]}"
+route gh.prs gh.sh; route gh.reviews gh.sh
+add_rows gh.prs 18 label.max_chars=76
+
+##### Right: now playing (mini-player popup, horizontal) #####
 sketchybar --add item media right \
            --set media "${MAIN[@]}" drawing=off icon=󰐊 icon.padding_left=10 label.padding_right=10 \
-                 label.max_chars=32 label.font="Hack Nerd Font:Bold:12.0" script="$PLUGIN_DIR/media.sh" \
-           --subscribe media "${popup_owner[@]}" \
+                 label.max_chars=32 label.font="Hack Nerd Font:Bold:12.0" \
+                 popup.horizontal=on popup.height=56 \
+           --subscribe media mouse.scrolled "${popup_owner[@]}" \
            --add bracket media_island media --set media_island "${island[@]}"
-media_row=(icon.padding_left=10 label.padding_right=12 background.height=24)
-sketchybar --add item media.app popup.media --set media.app "${media_row[@]}" \
-                 icon.font="sketchybar-app-font:Regular:14.0" label.font="Hack Nerd Font:Bold:13.0" \
-           --add item media.title popup.media --set media.title "${media_row[@]}" icon=󰎆 \
-                 label.font="Hack Nerd Font:Bold:13.0" label.max_chars=48 \
-           --add item media.artist popup.media --set media.artist "${media_row[@]}" icon=󰠃 \
-                 label.font="Hack Nerd Font:Regular:13.0" label.max_chars=48 \
-           --add item media.prev popup.media --set media.prev "${media_row[@]}" icon=󰒮 label="Previous" \
-                 script="$PLUGIN_DIR/hover.sh" click_script="media-control previous-track" \
-           --subscribe media.prev "${hover[@]}" \
-           --add item media.play popup.media --set media.play "${media_row[@]}" icon=󰐊 label="Play / Pause" \
-                 script="$PLUGIN_DIR/hover.sh" click_script="media-control toggle-play-pause" \
-           --subscribe media.play "${hover[@]}" \
-           --add item media.next popup.media --set media.next "${media_row[@]}" icon=󰒭 label="Next" \
-                 script="$PLUGIN_DIR/hover.sh" click_script="media-control next-track" \
-           --subscribe media.next "${hover[@]}"
+route media media.sh; route media.prev; route media.play; route media.next
+ctl=(icon.font="Hack Nerd Font:Bold:20.0" icon.padding_left=6 icon.padding_right=6 label.drawing=off)
+sketchybar --add item media.art popup.media --set media.art drawing=off width=48 padding_left=8 \
+                 background.drawing=on background.height=44 background.corner_radius=6 \
+                 background.image.corner_radius=6 icon.drawing=off label.drawing=off \
+           --add item media.app popup.media --set media.app icon.font="sketchybar-app-font:Regular:16.0" \
+                 label.drawing=off icon.padding_left=8 \
+           --add item media.info popup.media --set media.info icon.drawing=off label.max_chars=34 \
+                 label.font="Hack Nerd Font:Bold:13.0" \
+           --add item media.prev popup.media --set media.prev "${ctl[@]}" icon=󰒮 \
+                 click_script="media-control previous-track" --subscribe media.prev "${hover[@]}" \
+           --add item media.play popup.media --set media.play "${ctl[@]}" icon=󰐊 \
+                 click_script="media-control toggle-play-pause" --subscribe media.play "${hover[@]}" \
+           --add item media.next popup.media --set media.next "${ctl[@]}" icon=󰒭 \
+                 click_script="media-control next-track" --subscribe media.next "${hover[@]}" \
+           --add item media.time popup.media --set media.time icon.drawing=off label.color=$GREY \
+                 label.font="Hack Nerd Font:Regular:12.0" label.padding_right=12
 
 ##### Power-aware driver #####
 # Starts the C providers and retunes polling for AC / battery / Low Power Mode.
@@ -229,7 +295,18 @@ sketchybar --add item power right \
            --set power drawing=off updates=on update_freq=60 script="$PLUGIN_DIR/providers.sh" \
            --subscribe power power_source_change system_woke wifi_change
 
+##### Popup alignment #####
+# Right-side popups grow leftwards and center ones stay centred, so none run
+# off the screen edge.
+align=()
+for it in battery volume network disk memory cpu ai gh.prs media; do align+=(--set "$it" popup.align=right); done
+for it in date meeting toast badge.1 badge.2 badge.3 badge.4 badge.5 badge.6; do align+=(--set "$it" popup.align=center); done
+sketchybar "${align[@]}"
+
 ##### Start #####
+rm -f "$STATE/popup_open" "$STATE/barsd.ready"
+nohup "$CONFIG_DIR/helpers/bin/barsd" >/dev/null 2>>/tmp/barsd.err.log &
+for _ in $(seq 1 40); do [ -f "$STATE/barsd.ready" ] && break; sleep 0.05; done
 sketchybar --update
 
 # Long-running feeds (restarted on every reload)

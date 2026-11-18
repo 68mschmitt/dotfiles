@@ -1,13 +1,13 @@
 #!/bin/bash
 # JankyBorders config — highlights the focused window.
 # Rainbow animates on AC power only (static on battery). Set RAINBOW=off to always be static.
-RAINBOW=on
+RAINBOW=off
 
 options=(
   style=round
   width=6.0
   hidpi=on
-  active_color="gradient(top_left=0xffff0000,bottom_right=0xff00aaff)"
+  active_color=0xff8aadf4         # solid theme accent (rainbow off)
   inactive_color=0x00000000      # no border on unfocused windows
 )
 

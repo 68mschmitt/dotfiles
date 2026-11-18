@@ -32,11 +32,15 @@ if ! mkdir "$LOCK" 2>/dev/null; then
 fi
 trap 'rm -rf "$LOCK"' EXIT
 
-write_cache() { # ts cooldown_until text
-  printf '{"ts":%s,"cooldownUntil":%s,"text":%s}\n' "$1" "$2" "$(jq -Rn --arg t "$3" '$t')" >"$CACHE"
+write_cache() { # ts cooldown_until text [limits-json]
+  # `limits` (5h / weekly windows) is extra data for SketchyBar's AI popup;
+  # the tmux status scripts only read ts / cooldownUntil / text.
+  printf '{"ts":%s,"cooldownUntil":%s,"text":%s,"limits":%s}\n' "$1" "$2" \
+    "$(jq -Rn --arg t "$3" '$t')" "${4:-null}" >"$CACHE"
 }
 
 prev_text=$(jq -r '.text // ""' "$CACHE" 2>/dev/null)
+prev_limits=$(jq -c '.limits // null' "$CACHE" 2>/dev/null || echo null)
 
 token=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null \
         | jq -r '.claudeAiOauth.accessToken // empty' 2>/dev/null)
@@ -52,7 +56,7 @@ status="${response##*$'\n'}"
 body="${response%$'\n'*}"
 
 if [ "$status" = "429" ]; then
-  write_cache "$now" "$((now + COOLDOWN_429))" "$prev_text"
+  write_cache "$now" "$((now + COOLDOWN_429))" "$prev_text" "$prev_limits"
   exit 0
 fi
 [ "$status" = "200" ] || exit 0
@@ -84,4 +88,7 @@ text=$(printf '%s' "$body" | jq -r '
     end' 2>/dev/null)
 
 [ -n "$text" ] || exit 0
-write_cache "$now" 0 "$text"
+limits=$(printf '%s' "$body" | jq -c '{five_hour, seven_day, seven_day_opus}
+  | with_entries(select(.value != null))
+  | if length == 0 then null else . end' 2>/dev/null || echo null)
+write_cache "$now" 0 "$text" "${limits:-null}"
