@@ -6,7 +6,7 @@
 #   workspaces for monitors that aren't connected are hidden (unless they hold windows)
 #   focused workspace       -> bright background
 #   visible on its monitor  -> dim background
-#   has windows / empty     -> white / grey number
+#   has windows / empty     -> white / grey number (empty also gets a fainter background)
 #   app icons (sketchybar-app-font) for each distinct app on the workspace
 export PATH=/opt/homebrew/bin:$PATH
 source "$HOME/.config/sketchybar/plugins/icon_map.sh"
@@ -16,10 +16,13 @@ displays=$(sketchybar --query displays 2>/dev/null) || exit 0
 
 args=()
 while IFS=$'\t' read -r n focused active count disp used apps; do
-  if [ "$focused" = true ]; then bg=(background.drawing=on background.color=0xa0ffffff)
-  elif [ "$active" = true ]; then bg=(background.drawing=on background.color=0x40ffffff)
+  # Empty workspaces are dimmed everywhere: grey number and, when shown/focused,
+  # a much fainter background than a workspace that holds windows.
+  if [ "$count" -gt 0 ]; then col=0xffffffff; fb=0xa0ffffff; ab=0x40ffffff
+  else col=0x50ffffff; fb=0x38ffffff; ab=0x18ffffff; fi
+  if [ "$focused" = true ]; then bg=(background.drawing=on background.color=$fb)
+  elif [ "$active" = true ]; then bg=(background.drawing=on background.color=$ab)
   else bg=(background.drawing=off); fi
-  if [ "$count" -gt 0 ] || [ "$active" = true ]; then col=0xffffffff; else col=0x60ffffff; fi
   if [ "$used" = true ] || [ "$count" -gt 0 ]; then draw=on; else draw=off; fi
 
   icons=""

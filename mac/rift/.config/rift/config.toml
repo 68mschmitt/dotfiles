@@ -8,9 +8,10 @@ animation_fps = 120.0
 
 default_disable = false        # tile every space automatically
 
-# no focus-follows-mouse
-focus_follows_mouse = false
-mouse_follows_focus = false
+# Hovering a window focuses it; keyboard focus changes / window moves warp the
+# cursor to the center of the newly focused window.
+focus_follows_mouse = true
+mouse_follows_focus = true
 mouse_hides_on_focus = false
 
 hot_reload = true
@@ -69,11 +70,12 @@ workspace_rules = []
 "Meta + Ctrl + Up"    = { move_node = "up" }
 "Meta + Ctrl + Right" = { move_node = "right" }
 
-# Resize
-"Meta + Shift + Right" = { resize_window_grow = "horizontal" }
-"Meta + Shift + Left"  = { resize_window_shrink = "horizontal" }
-"Meta + Shift + Down"  = { resize_window_grow = "vertical" }
-"Meta + Shift + Up"    = { resize_window_shrink = "vertical" }
+# Resize: the window edge moves in the arrow's direction (grow toward a
+# neighbour, shrink toward the screen edge) - see resize.sh
+"Meta + Shift + Right" = { exec = ["/Users/michael.schmitt/.config/rift/resize.sh", "right"] }
+"Meta + Shift + Left"  = { exec = ["/Users/michael.schmitt/.config/rift/resize.sh", "left"] }
+"Meta + Shift + Down"  = { exec = ["/Users/michael.schmitt/.config/rift/resize.sh", "down"] }
+"Meta + Shift + Up"    = { exec = ["/Users/michael.schmitt/.config/rift/resize.sh", "up"] }
 
 "Meta + Shift + E"     = "balance"
 "Meta + Shift + Space" = "toggle_window_floating"

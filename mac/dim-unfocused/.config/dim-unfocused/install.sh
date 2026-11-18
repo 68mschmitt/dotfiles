@@ -1,10 +1,10 @@
 #!/bin/bash
 # Build dim-unfocused and (re)install it as a login LaunchAgent.
-#   ~/.config/dim-unfocused/install.sh [--alpha 0.3] [--radius 16] [--padding 8]
+#   ~/.config/dim-unfocused/install.sh [--alpha 0.15] [--radius 16] [--padding 8]
 # The plist is written (not symlinked) because launchd may skip symlinked
 # agents at login.
 set -euo pipefail
-ALPHA=0.3 RADIUS=16 PADDING=8
+ALPHA=0.15 RADIUS=16 PADDING=8
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --alpha) ALPHA="$2"; shift 2 ;;

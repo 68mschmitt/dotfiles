@@ -123,6 +123,8 @@ Replaces the old yabai + skhd setup. Nothing here needs SIP disabled.
 
 **Rift** (`mac/rift/.config/rift/config.toml`), tiling WM and all hotkeys:
 - BSP layout, 0.25s animations, 50pt top / 20pt side gaps, 20pt inner gaps
+- Focus follows the mouse; keyboard focus changes and window moves center the
+  cursor on the newly focused window
 - Global virtual workspaces: **1-3 built-in display, 4-6 / 7-9 external monitors
   left-to-right**. `assign-workspaces.py` auto-detects connected monitors and
   rewrites the `# BEGIN/END auto workspace_rules` block (triggered by
@@ -137,7 +139,7 @@ Replaces the old yabai + skhd setup. Nothing here needs SIP disabled.
 | `cmd + ctrl + arrows` | Move window in the tree |
 | `cmd + ctrl + drag` | Mouse move (drop on center = swap, edge = insert) |
 | `cmd + /` | Flip split orientation |
-| `cmd + shift + arrows` | Resize |
+| `cmd + shift + arrows` | Resize: the edge moves in the arrow's direction (`resize.sh`) |
 | `cmd + shift + e` / `space` | Balance / toggle float |
 | `cmd + 1-9` / `cmd + shift + 1-9` | Switch to / send window to workspace |
 | `cmd + tab` | Last workspace |
@@ -149,9 +151,17 @@ Replaces the old yabai + skhd setup. Nothing here needs SIP disabled.
 | `cmd + alt + d` / `w` | Dictation toggle / whisper mode |
 
 **SketchyBar** (`mac/sketchybar`): each monitor shows only its own workspace
-numbers (focused = bright, visible = dim, empty = grey) plus an app icon per
+numbers (focused = bright, visible = dim; empty workspaces get a grey number and
+fainter background) plus an app icon per
 app on the workspace (`plugins/rift_workspaces.sh`, called by Rift events).
 `plugins/icon_map.sh` comes from sketchybar-app-font v3.0.27.
+Date and time sit in the center; the right side shows CPU, memory, free disk,
+network (ethernet/Wi-Fi + down/up rate), volume and battery. CPU/memory turn
+red above 80%/85%; clicking them opens Activity Monitor. Right of the clock,
+`plugins/badges.sh` shows a red bubble (app icon + count) for each app with a
+Dock badge, read via `helpers/dock_badges.swift` (auto-built into
+`~/.local/bin/sketchybar-dock-badges`). This needs **Accessibility** permission
+for `sketchybar` (System Settings > Privacy & Security > Accessibility).
 
 **JankyBorders** (`mac/borders`): 6pt rounded border on the focused window.
 `rainbow.sh` animates it on AC power and switches to a static gradient on
@@ -161,7 +171,7 @@ battery (`RAINBOW=off` in `bordersrc` to always be static).
 menu bar, SketchyBar, Dock and notifications stay bright). After stowing, build
 and register the login agent with:
 ```bash
-~/.config/dim-unfocused/install.sh            # --alpha 0.3 --radius 16 --padding 8
+~/.config/dim-unfocused/install.sh            # --alpha 0.15 --radius 16 --padding 8
 ```
 
 **One-time setup on a new Mac** (Homebrew packages aren't managed by this repo):

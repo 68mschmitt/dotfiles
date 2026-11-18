@@ -6,7 +6,7 @@
 // No SIP changes and no special permissions: window frames come from
 // CGWindowList (bounds/PID/owner only, no titles).
 //
-// Options:  --alpha <0..1>   darkness of the dimming (default 0.3)
+// Options:  --alpha <0..1>   darkness of the dimming (default 0.15)
 //           --radius <pt>    corner radius of app windows (default 16)
 //           --padding <pt>   clear margin around the focused window so its
 //                            border stays bright (default 8)
@@ -18,7 +18,7 @@ func arg(_ name: String, _ fallback: CGFloat) -> CGFloat {
     if let i = a.firstIndex(of: name), i + 1 < a.count, let v = Double(a[i + 1]) { return CGFloat(v) }
     return fallback
 }
-let dimAlpha = arg("--alpha", 0.3)
+let dimAlpha = arg("--alpha", 0.15)
 let radius = arg("--radius", 16)
 let padding = arg("--padding", 8)
 
