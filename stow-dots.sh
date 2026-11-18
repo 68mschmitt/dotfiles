@@ -113,6 +113,15 @@ if [[ "$OS" == "Darwin" && ${#mac_pkgs[@]} -gt 0 ]]; then
   stow_group "$REPO_DIR/mac" "${mac_pkgs[@]}"
 fi
 
+# ---- git filter for the Rift config -------------------------------------------
+# assign-workspaces.py regenerates a per-monitor block in the Rift config; this
+# clean filter (referenced from .gitattributes) strips it on commit.
+if [[ "$OS" == "Darwin" && "$DRY_RUN" == "false" && -d "$REPO_DIR/.git" ]]; then
+  git -C "$REPO_DIR" config filter.rift-autogen.clean \
+    "perl -0pe 's/# BEGIN auto workspace_rules.*?# END auto workspace_rules/# BEGIN auto workspace_rules\nworkspace_rules = []\n# END auto workspace_rules/s'"
+  git -C "$REPO_DIR" config filter.rift-autogen.smudge cat
+fi
+
 # ---- one-time wallpaper config init --------------------------------------------
 # Fold wallpaper setup into this single entrypoint: on a real stow/restow to the
 # real $HOME (i.e. not --unstow, --dry-run, or a --target override), seed the

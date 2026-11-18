@@ -1,0 +1,123 @@
+# Rift config (tiling WM + all hotkeys). Lives in ~/projects/dotfiles/mac/rift.
+# Full reference: https://github.com/acsandmann/rift/blob/main/rift.default.toml
+
+[settings]
+animate = true
+animation_duration = 0.25
+animation_fps = 120.0
+
+default_disable = false        # tile every space automatically
+
+# no focus-follows-mouse
+focus_follows_mouse = false
+mouse_follows_focus = false
+mouse_hides_on_focus = false
+
+hot_reload = true
+
+# Keep sketchybar workspace labels in sync
+run_on_start = [
+  "/Users/michael.schmitt/.config/rift/assign-workspaces.py",
+  "rift-cli subscribe cli --event workspace_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
+  "rift-cli subscribe cli --event windows_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
+  "rift-cli subscribe cli --event focused_window_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
+]
+
+[settings.layout]
+mode = "bsp"
+
+[settings.layout.gaps.outer]   # screen padding
+top = 50
+left = 20
+bottom = 20
+right = 20
+
+[settings.layout.gaps.inner]   # gap between windows
+horizontal = 20
+vertical = 20
+
+# Mouse: hold Cmd+Ctrl and drag a window. Drop on a window's center = swap,
+# drop near an edge = insert on that side (how you build corners).
+# (default modifier is fn, which the ZMK board doesn't send)
+[settings.drag_drop]
+modifier = "Ctrl + Meta"
+drop_action = "swap"
+
+[virtual_workspaces]
+mode = "global"                # workspaces numbered across all monitors
+enabled = true
+default_workspace_count = 9
+# Workspace -> display rules are generated automatically for whatever monitors are connected
+# (built-in = 1-3, externals left-to-right = 4-6, 7-9) by ~/.config/rift/assign-workspaces.py
+# BEGIN auto workspace_rules
+workspace_rules = []
+# END auto workspace_rules
+
+[keys]
+# Fallback: manually toggle tiling for the current space
+"Alt + Z" = "toggle_space_activated"
+
+# Focus
+"Meta + Left"  = { move_focus = "left" }
+"Meta + Down"  = { move_focus = "down" }
+"Meta + Up"    = { move_focus = "up" }
+"Meta + Right" = { move_focus = "right" }
+
+# Move window in the tree
+"Meta + Ctrl + Left"  = { move_node = "left" }
+"Meta + Ctrl + Down"  = { move_node = "down" }
+"Meta + Ctrl + Up"    = { move_node = "up" }
+"Meta + Ctrl + Right" = { move_node = "right" }
+
+# Resize
+"Meta + Shift + Right" = { resize_window_grow = "horizontal" }
+"Meta + Shift + Left"  = { resize_window_shrink = "horizontal" }
+"Meta + Shift + Down"  = { resize_window_grow = "vertical" }
+"Meta + Shift + Up"    = { resize_window_shrink = "vertical" }
+
+"Meta + Shift + E"     = "balance"
+"Meta + Shift + Space" = "toggle_window_floating"
+
+# Flip the split of the focused window (side-by-side <-> stacked)
+"Meta + Slash" = "toggle_orientation"
+
+# Move window to the monitor in that direction (keeps focus on it)
+"Meta + Ctrl + Shift + Left"  = { move_window_to_display = { selector = "left" } }
+"Meta + Ctrl + Shift + Right" = { move_window_to_display = { selector = "right" } }
+"Meta + Ctrl + Shift + Up"    = { move_window_to_display = { selector = "up" } }
+"Meta + Ctrl + Shift + Down"  = { move_window_to_display = { selector = "down" } }
+
+# Focus the monitor in that direction
+"Ctrl + Alt + Left"  = { focus_display = "left" }
+"Ctrl + Alt + Right" = { focus_display = "right" }
+"Ctrl + Alt + Up"    = { focus_display = "up" }
+"Ctrl + Alt + Down"  = { focus_display = "down" }
+
+# Workspaces (global: 1-3 built-in, 4-6 / 7-9 external monitors left-to-right)
+"Meta + 1" = { switch_to_workspace = 0 }
+"Meta + 2" = { switch_to_workspace = 1 }
+"Meta + 3" = { switch_to_workspace = 2 }
+"Meta + 4" = { switch_to_workspace = 3 }
+"Meta + 5" = { switch_to_workspace = 4 }
+"Meta + 6" = { switch_to_workspace = 5 }
+"Meta + 7" = { switch_to_workspace = 6 }
+"Meta + 8" = { switch_to_workspace = 7 }
+"Meta + 9" = { switch_to_workspace = 8 }
+"Meta + Shift + 1" = { move_window_to_workspace = 0 }
+"Meta + Shift + 2" = { move_window_to_workspace = 1 }
+"Meta + Shift + 3" = { move_window_to_workspace = 2 }
+"Meta + Shift + 4" = { move_window_to_workspace = 3 }
+"Meta + Shift + 5" = { move_window_to_workspace = 4 }
+"Meta + Shift + 6" = { move_window_to_workspace = 5 }
+"Meta + Shift + 7" = { move_window_to_workspace = 6 }
+"Meta + Shift + 8" = { move_window_to_workspace = 7 }
+"Meta + Shift + 9" = { move_window_to_workspace = 8 }
+"Alt + Tab" = "switch_to_last_workspace"
+
+# App launchers, wallpaper, dictation
+"Meta + Enter" = { exec = ["/usr/bin/open", "-n", "-a", "Ghostty"] }
+"Meta + B"     = { exec = ["/usr/bin/open", "-n", "-a", "Google Chrome"] }
+"Meta + Ctrl + W" = { exec = ["/bin/bash", "-c", "cd /Users/michael.schmitt/.scripts/wallpaper-scripts/ && ./set-random-wallpaper.sh"] }
+"Meta + Ctrl + B" = { exec = ["/bin/bash", "-c", "cd /Users/michael.schmitt/.scripts/wallpaper-scripts/ && ./blacklist-wallpaper.sh"] }
+"Meta + Alt + D"  = { exec = ["/Users/michael.schmitt/.local/bin/dictate-toggle"] }
+"Meta + Alt + W"  = { exec = ["/Users/michael.schmitt/.local/bin/dictate-toggle", "-w"] }

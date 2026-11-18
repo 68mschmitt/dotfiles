@@ -9,8 +9,10 @@ This repository contains configuration files for my development environment, inc
 - **Neovim** - Modern Vim-based text editor with Lua configuration
 - **Tmux** - Terminal multiplexer for managing multiple terminal sessions
 - **Ghostty** - Terminal emulator configuration
-- **Yabai** - Tiling window manager for macOS
-- **Skhd** - Simple hotkey daemon for macOS keyboard shortcuts
+- **Rift** - Tiling window manager for macOS (BSP, animations, no SIP changes) + all hotkeys
+- **SketchyBar** - Menu bar with per-monitor Rift workspace labels and app icons
+- **JankyBorders** - Animated rainbow border on the focused window
+- **dim-unfocused** - Small Swift helper that dims unfocused windows
 - **Pi** - Coding agent settings, extensions and prompts
 - **Prime Agent** - Agent defaults and status extensions
 - **Claude Code** - Global agent settings, statusline and subagents
@@ -41,7 +43,7 @@ Use GNU Stow to symlink configurations into your home directory:
 
 This creates symlinks for every top-level package in this repo (`neovim`,
 `tmux`, `ghostty`, `scripts`, `plover`, `pi`, `prime`, `claude`), plus the macOS-specific
-packages under `mac/` (`skhd`, `yabai`) when run on macOS. On first run it
+packages under `mac/` (`rift`, `sketchybar`, `borders`, `dim-unfocused`) when run on macOS. On first run it
 also seeds the wallpaper config (`~/.config/my-wallpapers/`) automatically—
 this one command is the entire setup, no follow-up steps required.
 
@@ -57,8 +59,10 @@ Options:
 ```
 dotfiles/
 ├── mac/                    # macOS-specific configurations
-│   ├── skhd/               # Keyboard shortcuts
-│   └── yabai/              # Window manager settings
+│   ├── rift/               # Tiling WM + hotkeys (.config/rift)
+│   ├── sketchybar/         # Bar + Rift workspace plugin (.config/sketchybar)
+│   ├── borders/            # JankyBorders focus border (.config/borders)
+│   └── dim-unfocused/      # Swift dimming helper + installer (.config/dim-unfocused)
 ├── neovim/                 # Neovim configuration
 │   └── .config/nvim/
 │       ├── lua/             # Lua configuration modules
@@ -115,20 +119,62 @@ Lua-based configuration featuring:
 
 ### Window Management (macOS)
 
-**Yabai** tiling window manager with:
-- BSP layout by default
-- Custom padding and gaps
-- 50pt top padding, 20pt other sides
+Replaces the old yabai + skhd setup. Nothing here needs SIP disabled.
 
-**Skhd** keyboard shortcuts:
-- `cmd + return` - Open Ghostty terminal
-- `cmd + b` - Open Chrome
-- `cmd + arrow keys` - Focus windows
-- `cmd + ctrl + arrow keys` - Swap windows
-- `cmd + shift + space` - Toggle float
-- `cmd + shift + e` - Balance window sizes
-- `cmd + ctrl + w` - Change wallpaper
-- `cmd + ctrl + b` - Blacklist current wallpaper
+**Rift** (`mac/rift/.config/rift/config.toml`), tiling WM and all hotkeys:
+- BSP layout, 0.25s animations, 50pt top / 20pt side gaps, 20pt inner gaps
+- Global virtual workspaces: **1-3 built-in display, 4-6 / 7-9 external monitors
+  left-to-right**. `assign-workspaces.py` auto-detects connected monitors and
+  rewrites the `# BEGIN/END auto workspace_rules` block (triggered by
+  SketchyBar's `display_change` and at Rift start). A git clean filter strips
+  that block on commit so monitor changes don't create diffs (configured by
+  `stow-dots.sh`).
+- Hot-reloads on save; `run_on_start` changes need `rift service restart`
+
+| Keys | Action |
+|---|---|
+| `cmd + arrows` | Focus window |
+| `cmd + ctrl + arrows` | Move window in the tree |
+| `cmd + ctrl + drag` | Mouse move (drop on center = swap, edge = insert) |
+| `cmd + /` | Flip split orientation |
+| `cmd + shift + arrows` | Resize |
+| `cmd + shift + e` / `space` | Balance / toggle float |
+| `cmd + 1-9` / `cmd + shift + 1-9` | Switch to / send window to workspace |
+| `cmd + tab` | Last workspace |
+| `cmd + ctrl + shift + arrows` | Send window to monitor in that direction |
+| `ctrl + alt + arrows` | Focus monitor in that direction |
+| `alt + z` | Toggle tiling for the current space |
+| `cmd + return` / `cmd + b` | Ghostty / Chrome |
+| `cmd + ctrl + w` / `b` | Random wallpaper / blacklist wallpaper |
+| `cmd + alt + d` / `w` | Dictation toggle / whisper mode |
+
+**SketchyBar** (`mac/sketchybar`): each monitor shows only its own workspace
+numbers (focused = bright, visible = dim, empty = grey) plus an app icon per
+app on the workspace (`plugins/rift_workspaces.sh`, called by Rift events).
+`plugins/icon_map.sh` comes from sketchybar-app-font v3.0.27.
+
+**JankyBorders** (`mac/borders`): 6pt rounded border on the focused window.
+`rainbow.sh` animates it on AC power and switches to a static gradient on
+battery (`RAINBOW=off` in `bordersrc` to always be static).
+
+**dim-unfocused** (`mac/dim-unfocused`): dims unfocused windows only (desktop,
+menu bar, SketchyBar, Dock and notifications stay bright). After stowing, build
+and register the login agent with:
+```bash
+~/.config/dim-unfocused/install.sh            # --alpha 0.3 --radius 16 --padding 8
+```
+
+**One-time setup on a new Mac** (Homebrew packages aren't managed by this repo):
+```bash
+brew install acsandmann/tap/rift jq
+brew trust felixkratz/formulae
+brew install felixkratz/formulae/sketchybar felixkratz/formulae/borders
+brew install --cask font-sketchybar-app-font font-hack-nerd-font
+./stow-dots.sh
+rift service install && rift service start   # grant Accessibility, then: rift service restart
+brew services start sketchybar && brew services start borders
+~/.config/dim-unfocused/install.sh
+```
 
 ### Wallpaper Management
 
@@ -276,7 +322,7 @@ cp ~/.gitconfig git/.gitconfig
 ## Requirements
 
 - **GNU Stow**
-- **macOS** for the `mac/` packages (skhd, yabai) and the wallpaper scripts
+- **macOS** for the `mac/` packages (rift, sketchybar, borders, dim-unfocused) and the wallpaper scripts
   (they use `osascript`); the rest (neovim, tmux, ghostty, pi, claude, plover,
   git/qol/fun scripts) is platform-agnostic
 - **jq** for the Claude Code statusline (`claude/.claude/statusline-*.sh`)

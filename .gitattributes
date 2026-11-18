@@ -1,0 +1,3 @@
+# Rift: the workspace->display block is regenerated per machine/monitor setup by
+# assign-workspaces.py; strip it on commit (see README "Rift" section).
+mac/rift/.config/rift/config.toml filter=rift-autogen
