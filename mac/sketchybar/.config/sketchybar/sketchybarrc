@@ -1,96 +1,154 @@
-# This is a demo config to showcase some of the most important commands.
-# It is meant to be changed and configured, as it is intentionally kept sparse.
-# For a (much) more advanced configuration example see my dotfiles:
-# https://github.com/FelixKratz/dotfiles
+#!/bin/bash
+# SketchyBar: rounded "islands" on a solid, theme-coloured bar.
+#   left    workspaces (per monitor) | rift state + front app
+#   center  date + time | next meeting, mic/cam in use | Dock badge bubbles (all monitors,
+#           hover = notification preview)
+#   right   now playing | cpu, memory, disk, network, volume, battery
+# Workspaces, front app, date/time and the badge bubbles are drawn on every
+# monitor; the other live widgets sit on the main (built-in) display ($MAIN_DISPLAY).
+# Metrics come from C event providers (helpers/event_providers, restarted by
+# plugins/providers.sh with intervals tuned to AC / battery / Low Power Mode).
 
+source "$CONFIG_DIR/colors.sh"
 PLUGIN_DIR="$CONFIG_DIR/plugins"
+MAIN=(display=$MAIN_DISPLAY)
 
-##### Bar Appearance #####
-# Configuring the general appearance of the bar.
-# These are only some of the options available. For all options see:
-# https://felixkratz.github.io/SketchyBar/config/bar
-# If you are looking for other colors, see the color picker:
-# https://felixkratz.github.io/SketchyBar/config/tricks#color-picker
-
-sketchybar --bar position=top height=40 blur_radius=30 color=0x40000000
-
-##### Changing Defaults #####
-# We now change some default values, which are applied to all further items.
-# For a full list of all available item properties see:
-# https://felixkratz.github.io/SketchyBar/config/items
+##### Bar #####
+sketchybar --bar position=top height=40 y_offset=0 margin=0 corner_radius=0 \
+                 padding_left=12 padding_right=12 color=$BAR_BG border_width=1 \
+                 border_color=$BAR_BORDER blur_radius=0 shadow=on sticky=on topmost=off
 
 default=(
-  padding_left=5
-  padding_right=5
-  icon.font="Hack Nerd Font:Bold:17.0"
-  label.font="Hack Nerd Font:Bold:14.0"
-  icon.color=0xffffffff
-  label.color=0xffffffff
+  updates=when_shown
+  padding_left=3
+  padding_right=3
+  icon.font="Hack Nerd Font:Bold:16.0"
+  label.font="Hack Nerd Font:Bold:13.0"
+  icon.color=$WHITE
+  label.color=$WHITE
+  icon.highlight_color=$HOVER
+  label.highlight_color=$HOVER
   icon.padding_left=4
   icon.padding_right=4
-  label.padding_left=4
+  label.padding_left=2
   label.padding_right=4
+  background.height=26
+  background.corner_radius=8
+  popup.background.color=$POPUP_BG
+  popup.background.border_color=$POPUP_BORDER
+  popup.background.border_width=1
+  popup.background.corner_radius=10
+  popup.background.shadow.drawing=on
+  popup.blur_radius=20
+  popup.y_offset=6
+  scroll_texts=on
 )
 sketchybar --default "${default[@]}"
 
-##### Adding Mission Control Space Indicators #####
-# Let's add some mission control spaces:
-# https://felixkratz.github.io/SketchyBar/config/components#space----associate-mission-control-spaces-with-an-item
-# to indicate active and available mission control spaces.
+island=(
+  background.color=$ISLAND_BG
+  background.corner_radius=11
+  background.height=32
+  background.border_width=1
+  background.border_color=$ISLAND_BORDER
+  background.shadow.drawing=off
+)
 
-# Rift virtual workspaces (global numbering: 1-3 built-in, 4-6 / 7-9 externals left-to-right).
-# Highlighting is driven by plugins/rift_workspaces.sh, which Rift calls on every
-# workspace/window/focus change.
+# Custom events (providers / agents trigger these)
+sketchybar --add event cpu_update --add event memory_update --add event network_update \
+           --add event network_iface --add event av_update --add event calendar_update \
+           --add event notifications_update
+
+hover=(mouse.entered mouse.exited)
+popup_owner=(mouse.clicked mouse.entered mouse.exited mouse.exited.global)
+
+# add_rows <parent> <count>: hidden popup rows <parent>.row.N, filled by lib.sh fill_popup
+# (one sketchybar call per popup; optional 3rd arg = extra row properties)
+add_rows() {
+  local rows=()
+  for ((r = 1; r <= $2; r++)); do
+    rows+=(--add item "$1.row.$r" popup."$1"
+           --set "$1.row.$r" drawing=off icon.font="Hack Nerd Font:Bold:14.0"
+                 label.font="Hack Nerd Font:Regular:13.0" icon.padding_left=10
+                 label.padding_right=12 background.height=24 $3
+                 script="$PLUGIN_DIR/hover.sh"
+           --subscribe "$1.row.$r" "${hover[@]}")
+  done
+  sketchybar "${rows[@]}"
+}
+
+##### Left: workspaces #####
+# Rift virtual workspaces (global numbering: 1-3 built-in, 4-6 / 7-9 externals
+# left-to-right). plugins/rift_workspaces.sh (called by Rift) sets highlight,
+# app icons and which monitor shows each label.
 for sid in 1 2 3 4 5 6 7 8 9
 do
   ws=(
     icon="$sid"
-    icon.padding_left=7
-    icon.padding_right=7
-    background.color=0x40ffffff
-    background.corner_radius=5
-    background.height=25
-    background.drawing=off
+    icon.padding_left=8
+    icon.padding_right=8
+    background.color=0x00ffffff
+    background.drawing=on
     label.drawing=off
     label.font="sketchybar-app-font:Regular:14.0"
     label.padding_left=0
     label.padding_right=8
     label.y_offset=-1
+    padding_left=2
+    padding_right=2
+    script="$PLUGIN_DIR/hover.sh"
     click_script="rift-cli execute workspace switch $(($sid-1))"
   )
-  sketchybar --add item rift.ws."$sid" left --set rift.ws."$sid" "${ws[@]}"
+  sketchybar --add item rift.ws."$sid" left --set rift.ws."$sid" "${ws[@]}" \
+             --subscribe rift.ws."$sid" "${hover[@]}"
 done
-# Initial sync when sketchybar starts
-sketchybar --set rift.ws.1 script="$PLUGIN_DIR/rift_workspaces.sh"
-# Re-assign workspaces to monitors whenever displays are connected/disconnected
-sketchybar --add item rift_displays left \
+sketchybar --add bracket workspaces '/rift\.ws\..*/' --set workspaces "${island[@]}"
+
+# Hidden drivers: initial workspace sync, monitor re-assignment
+sketchybar --add item rift_sync left --set rift_sync drawing=off script="$PLUGIN_DIR/rift_workspaces.sh" \
+           --add item rift_displays left \
            --set rift_displays drawing=off updates=on script="$HOME/.config/rift/assign-workspaces.py" \
            --subscribe rift_displays display_change
 
-##### Adding Left Items #####
-# We add some regular items to the left side of the bar, where
-# only the properties deviating from the current defaults need to be set
-
-sketchybar --add item chevron left \
-           --set chevron icon= label.drawing=off \
+##### Left: rift state + front app #####
+sketchybar --add item rift_state left \
+           --set rift_state "${MAIN[@]}" icon=󰕰 label=bsp icon.padding_left=10 \
+                 label.font="Hack Nerd Font:Bold:12.0" script="$PLUGIN_DIR/rift_state.sh" \
+           --subscribe rift_state "${popup_owner[@]}" \
            --add item front_app left \
-           --set front_app icon.drawing=off script="$PLUGIN_DIR/front_app.sh" \
-           --subscribe front_app front_app_switched
+           --set front_app icon.drawing=off label.padding_left=8 label.padding_right=10 \
+                 script="$PLUGIN_DIR/front_app.sh" \
+           --subscribe front_app front_app_switched \
+           --add bracket left_info rift_state front_app --set left_info "${island[@]}"
+add_rows rift_state 6
 
-##### Center: date + time #####
-# Items in "center" sit around the middle of the bar (the built-in display runs
-# at a 16:10 resolution below the notch, so nothing is hidden there).
-
+##### Center: date + time | meeting + mic/cam #####
 sketchybar --add item date center \
-           --set date update_freq=60 icon=󰃭 script="$PLUGIN_DIR/clock.sh" \
-                 click_script="open -a Calendar" \
-           --subscribe date system_woke \
+           --set date update_freq=60 icon=󰃭 icon.padding_left=10 script="$PLUGIN_DIR/clock.sh" \
+           --subscribe date system_woke "${popup_owner[@]}" \
            --add item clock center \
-           --set clock update_freq=10 icon= script="$PLUGIN_DIR/clock.sh" \
-           --subscribe clock system_woke
+           --set clock update_freq=10 icon= label.padding_right=10 script="$PLUGIN_DIR/clock.sh" \
+           --subscribe clock system_woke mouse.clicked "${hover[@]}" \
+           --add bracket datetime date clock --set datetime "${island[@]}"
+add_rows date 10
+
+sketchybar --add item meeting center \
+           --set meeting "${MAIN[@]}" drawing=off update_freq=30 icon=󰃰 icon.padding_left=10 \
+                 label.padding_right=10 script="$PLUGIN_DIR/meeting.sh" \
+           --subscribe meeting calendar_update system_woke mouse.clicked "${hover[@]}" \
+           --add item av.mic center \
+           --set av.mic "${MAIN[@]}" drawing=off icon=󰍬 icon.color=$RED label.drawing=off \
+                 script="$PLUGIN_DIR/av.sh" \
+           --subscribe av.mic av_update \
+           --add item av.cam center \
+           --set av.cam "${MAIN[@]}" drawing=off icon=󰄀 icon.color=$GREEN label.drawing=off \
+                 icon.padding_right=8 \
+           --add bracket meeting_island meeting av.mic av.cam --set meeting_island "${island[@]}"
 
 # Notification bubbles: one red pill (app icon + count) per app with a Dock
-# badge, right of the clock. The hidden "badges" item drives badge.1..6.
+# badge, on every monitor. Hover = preview of that app's notifications
+# (helpers/notifications agent), click = open the app. The hidden "badges"
+# item drives badge.1..6.
 for i in 1 2 3 4 5 6
 do
   badge=(
@@ -103,38 +161,79 @@ do
     label.font="Hack Nerd Font:Bold:12.0"
     label.padding_left=2
     label.padding_right=8
-    background.color=0xffe5484d
-    background.corner_radius=10
-    background.height=22
+    background.color=$BADGE_RED
+    background.corner_radius=11
+    background.height=24
+    script="$PLUGIN_DIR/badges.sh"
   )
-  sketchybar --add item badge."$i" center --set badge."$i" "${badge[@]}"
+  sketchybar --add item badge."$i" center --set badge."$i" "${badge[@]}" \
+             --subscribe badge."$i" "${popup_owner[@]}"
+  add_rows badge."$i" 6 label.max_chars=96
 done
 sketchybar --add item badges center \
            --set badges drawing=off updates=on update_freq=3 script="$PLUGIN_DIR/badges.sh" \
            --subscribe badges front_app_switched system_woke
 
-##### Right: status + metrics #####
-# Added right-to-left: battery is the rightmost item. Polled items use
-# update_freq (seconds); volume/battery also react to system events.
-
+##### Right: system metrics (added right-to-left) #####
 sketchybar --add item battery right \
-           --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh" \
-           --subscribe battery system_woke power_source_change \
+           --set battery "${MAIN[@]}" update_freq=120 label.padding_right=10 script="$PLUGIN_DIR/battery.sh" \
+           --subscribe battery system_woke power_source_change "${popup_owner[@]}" \
            --add item volume right \
-           --set volume script="$PLUGIN_DIR/volume.sh" \
-           --subscribe volume volume_change \
+           --set volume "${MAIN[@]}" script="$PLUGIN_DIR/volume.sh" \
+           --subscribe volume volume_change mouse.clicked "${hover[@]}" \
            --add item network right \
-           --set network update_freq=2 icon=󰈀 label.font="Hack Nerd Font:Bold:12.0" \
+           --set network "${MAIN[@]}" icon=󰈀 label="↓  0B ↑  0B" label.font="Hack Nerd Font:Bold:12.0" \
                  script="$PLUGIN_DIR/network.sh" \
-                 click_script="open 'x-apple.systempreferences:com.apple.Network-Settings.extension'" \
+           --subscribe network network_update network_iface "${popup_owner[@]}" \
            --add item disk right \
-           --set disk update_freq=300 icon=󰋊 script="$PLUGIN_DIR/disk.sh" \
+           --set disk "${MAIN[@]}" update_freq=300 icon=󰋊 script="$PLUGIN_DIR/disk.sh" \
+           --subscribe disk mouse.clicked "${hover[@]}" \
            --add item memory right \
-           --set memory update_freq=5 icon=󰍛 script="$PLUGIN_DIR/memory.sh" \
-                 click_script="open -a 'Activity Monitor'" \
+           --set memory "${MAIN[@]}" icon=󰍛 label=–% script="$PLUGIN_DIR/memory.sh" \
+           --subscribe memory memory_update "${popup_owner[@]}" \
            --add item cpu right \
-           --set cpu update_freq=3 icon=󰻠 script="$PLUGIN_DIR/cpu.sh" \
-                 click_script="open -a 'Activity Monitor'"
+           --set cpu "${MAIN[@]}" icon=󰻠 label=–% icon.padding_left=10 script="$PLUGIN_DIR/cpu.sh" \
+           --subscribe cpu cpu_update "${popup_owner[@]}" \
+           --add bracket system cpu memory disk network volume battery --set system "${island[@]}"
+add_rows cpu 6
+add_rows memory 6
+add_rows network 4
+add_rows battery 5
 
-##### Force all scripts to run the first time (never do this in a script) #####
+##### Right: now playing #####
+sketchybar --add item media right \
+           --set media "${MAIN[@]}" drawing=off icon=󰐊 icon.padding_left=10 label.padding_right=10 \
+                 label.max_chars=32 label.font="Hack Nerd Font:Bold:12.0" script="$PLUGIN_DIR/media.sh" \
+           --subscribe media "${popup_owner[@]}" \
+           --add bracket media_island media --set media_island "${island[@]}"
+media_row=(icon.padding_left=10 label.padding_right=12 background.height=24)
+sketchybar --add item media.app popup.media --set media.app "${media_row[@]}" \
+                 icon.font="sketchybar-app-font:Regular:14.0" label.font="Hack Nerd Font:Bold:13.0" \
+           --add item media.title popup.media --set media.title "${media_row[@]}" icon=󰎆 \
+                 label.font="Hack Nerd Font:Bold:13.0" label.max_chars=48 \
+           --add item media.artist popup.media --set media.artist "${media_row[@]}" icon=󰠃 \
+                 label.font="Hack Nerd Font:Regular:13.0" label.max_chars=48 \
+           --add item media.prev popup.media --set media.prev "${media_row[@]}" icon=󰒮 label="Previous" \
+                 script="$PLUGIN_DIR/hover.sh" click_script="media-control previous-track" \
+           --subscribe media.prev "${hover[@]}" \
+           --add item media.play popup.media --set media.play "${media_row[@]}" icon=󰐊 label="Play / Pause" \
+                 script="$PLUGIN_DIR/hover.sh" click_script="media-control toggle-play-pause" \
+           --subscribe media.play "${hover[@]}" \
+           --add item media.next popup.media --set media.next "${media_row[@]}" icon=󰒭 label="Next" \
+                 script="$PLUGIN_DIR/hover.sh" click_script="media-control next-track" \
+           --subscribe media.next "${hover[@]}"
+
+##### Power-aware driver #####
+# Starts the C providers and retunes polling for AC / battery / Low Power Mode.
+sketchybar --add item power right \
+           --set power drawing=off updates=on update_freq=60 script="$PLUGIN_DIR/providers.sh" \
+           --subscribe power power_source_change system_woke wifi_change
+
+##### Start #####
 sketchybar --update
+
+# Long-running feeds (restarted on every reload)
+pkill -f "$PLUGIN_DIR/media_stream.sh" 2>/dev/null
+pkill -f "media-control stream" 2>/dev/null
+nohup "$PLUGIN_DIR/media_stream.sh" >/dev/null 2>&1 &
+launchctl kickstart -k "gui/$(id -u)/local.sketchybar-events" >/dev/null 2>&1 &

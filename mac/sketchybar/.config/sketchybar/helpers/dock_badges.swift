@@ -1,7 +1,8 @@
-// Prints the Dock badge of every app that has one, as "App Name<TAB>label".
+// Prints the Dock badge of every app that has one, as
+// "App Name<TAB>label<TAB>bundle id".
 // Reads the Dock's AXStatusLabel attributes, so the process that runs it
 // (sketchybar) needs Accessibility permission. Built on demand by
-// plugins/badges.sh into ~/.local/bin/sketchybar-dock-badges.
+// helpers/makefile into helpers/bin/dock_badges.
 import AppKit
 import ApplicationServices
 
@@ -22,6 +23,8 @@ for list in value(root, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
     for item in value(list, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
         guard let label = value(item, "AXStatusLabel") as? String, !label.isEmpty,
               let title = value(item, kAXTitleAttribute) as? String else { continue }
-        print("\(title)\t\(label)")
+        let url = value(item, kAXURLAttribute) as? URL
+        let bundle = url.flatMap { Bundle(url: $0)?.bundleIdentifier } ?? ""
+        print("\(title)\t\(label)\t\(bundle)")
     }
 }

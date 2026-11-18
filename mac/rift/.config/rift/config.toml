@@ -22,6 +22,8 @@ run_on_start = [
   "rift-cli subscribe cli --event workspace_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
   "rift-cli subscribe cli --event windows_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
   "rift-cli subscribe cli --event focused_window_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
+  "rift-cli subscribe cli --event layout_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
+  "rift-cli subscribe cli --event binding_mode_changed --command /Users/michael.schmitt/.config/sketchybar/plugins/rift_workspaces.sh",
 ]
 
 [settings.layout]

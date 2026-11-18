@@ -150,18 +150,48 @@ Replaces the old yabai + skhd setup. Nothing here needs SIP disabled.
 | `cmd + ctrl + w` / `b` | Random wallpaper / blacklist wallpaper |
 | `cmd + alt + d` / `w` | Dictation toggle / whisper mode |
 
-**SketchyBar** (`mac/sketchybar`): each monitor shows only its own workspace
-numbers (focused = bright, visible = dim; empty workspaces get a grey number and
-fainter background) plus an app icon per
-app on the workspace (`plugins/rift_workspaces.sh`, called by Rift events).
-`plugins/icon_map.sh` comes from sketchybar-app-font v3.0.27.
-Date and time sit in the center; the right side shows CPU, memory, free disk,
-network (ethernet/Wi-Fi + down/up rate), volume and battery. CPU/memory turn
-red above 80%/85%; clicking them opens Activity Monitor. Right of the clock,
-`plugins/badges.sh` shows a red bubble (app icon + count) for each app with a
-Dock badge, read via `helpers/dock_badges.swift` (auto-built into
-`~/.local/bin/sketchybar-dock-badges`). This needs **Accessibility** permission
-for `sketchybar` (System Settings > Privacy & Security > Accessibility).
+**SketchyBar** (`mac/sketchybar`): rounded "islands" on a solid, theme-coloured
+bar (palette in `colors.sh`). Workspaces, front app, date/time and notification
+bubbles show on every monitor; the other live widgets only on the main
+(built-in) display.
+
+| Island | Contents | Click |
+|---|---|---|
+| Workspaces | per-monitor numbers + app icons (focused = accent, visible = dim, empty = grey) | switch |
+| Rift state | layout (`bsp`), `float` for a floating window, binding mode in orange + front app | Rift actions popup |
+| Date / time | | agenda popup (today + tomorrow, join links) |
+| Meeting | "Standup in 12m" (orange <15m, red <5m), "· 8m left" in green during | join link, right-click agenda |
+| Mic / camera | red mic / green camera while in use | |
+| Badges | red bubble per app with a Dock badge (icon + count); hover = preview of its latest notifications | open app |
+| Now playing | track — artist (grey when paused) | popup with controls, right-click play/pause |
+| System | CPU, memory, free disk, network, volume, battery | top processes / network details / battery health popups |
+
+Everything hovers (accent tint) and animates (`--animate tanh`). How it is fed:
+- `helpers/event_providers/` C daemons (`cpu_load`, `network_load` from
+  FelixKratz/dotfiles, `memory_load` in the same style) push metrics over
+  SketchyBar's Mach port; built by `helpers/makefile` into `helpers/bin/`.
+- `plugins/providers.sh` (hidden `power` item) restarts them and retunes
+  polling for **AC / battery / Low Power Mode** (e.g. CPU every 2s / 5s / 10s;
+  animations shorter on battery, off in Low Power Mode). It also follows the
+  default network interface.
+- `helpers/bar_events/` (`sketchybar-events` LaunchAgent, Swift): mic/camera
+  via CoreAudio/CoreMediaIO listeners and the calendar via EventKit, written to
+  `~/.cache/sketchybar/agenda.tsv`. Install with
+  `~/.config/sketchybar/helpers/bar_events/install.sh`.
+- `plugins/media_stream.sh` follows `media-control stream` (`brew install media-control`).
+- `plugins/badges.sh` reads Dock badges with `helpers/dock_badges.swift`.
+- `helpers/notifications/` (`sketchybar-notifications` LaunchAgent, Swift)
+  mirrors Notification Center (read-only usernoted database) into
+  `~/.cache/sketchybar/notifications.tsv` (mode 600) for the hover previews.
+  Install with `~/.config/sketchybar/helpers/notifications/install.sh`.
+- `plugins/rift_workspaces.sh` (called by Rift events) also sets the Rift state item.
+
+Permissions: **Accessibility** for `sketchybar` (Dock badges), **Calendars**
+for `sketchybar-events`, and **Full Disk Access** for
+`~/.local/bin/sketchybar-notifications` only (notification previews; the
+Notification Center database is FDA-protected). New Outlook keeps its calendar in the cloud, so the
+meeting widget needs the work account added in System Settings > Internet
+Accounts (Calendars on). `plugins/icon_map.sh` comes from sketchybar-app-font v3.0.27.
 
 **JankyBorders** (`mac/borders`): 6pt rounded border on the focused window.
 `rainbow.sh` animates it on AC power and switches to a static gradient on
@@ -178,12 +208,14 @@ and register the login agent with:
 ```bash
 brew install acsandmann/tap/rift jq
 brew trust felixkratz/formulae
-brew install felixkratz/formulae/sketchybar felixkratz/formulae/borders
+brew install felixkratz/formulae/sketchybar felixkratz/formulae/borders media-control
 brew install --cask font-sketchybar-app-font font-hack-nerd-font
 ./stow-dots.sh
 rift service install && rift service start   # grant Accessibility, then: rift service restart
 brew services start sketchybar && brew services start borders
 ~/.config/dim-unfocused/install.sh
+~/.config/sketchybar/helpers/bar_events/install.sh
+~/.config/sketchybar/helpers/notifications/install.sh
 ```
 
 ### Wallpaper Management
