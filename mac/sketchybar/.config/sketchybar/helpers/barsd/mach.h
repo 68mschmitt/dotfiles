@@ -32,7 +32,7 @@ static inline mach_port_t bm_lookup(const char* name) {
   return port;
 }
 
-static inline bool bm_send(mach_port_t port, const char* data, uint32_t len) {
+static inline bool bm_send(mach_port_t port, const char* data, uint32_t len, mach_msg_timeout_t timeout) {
   if (!port) return false;
   struct bm_message msg = {0};
   msg.header.msgh_remote_port = port;
@@ -46,11 +46,12 @@ static inline bool bm_send(mach_port_t port, const char* data, uint32_t len) {
   msg.descriptor.deallocate = false;
   msg.descriptor.type = MACH_MSG_OOL_DESCRIPTOR;
   return mach_msg(&msg.header, MACH_SEND_MSG | MACH_SEND_TIMEOUT, sizeof(struct bm_message), 0,
-                  MACH_PORT_NULL, 100, MACH_PORT_NULL) == KERN_SUCCESS;
+                  MACH_PORT_NULL, timeout, MACH_PORT_NULL) == KERN_SUCCESS;
 }
 
 // Join argv with NULs (+ final NUL) and send.
-static inline bool bm_send_argv(mach_port_t* cache, const char* service, const char** argv, int argc) {
+static inline bool bm_send_argv(mach_port_t* cache, const char* service, const char** argv, int argc,
+                                mach_msg_timeout_t timeout) {
   size_t len = 1;
   for (int i = 0; i < argc; i++) len += strlen(argv[i]) + 1;
   char* buf = (char*)malloc(len);
@@ -58,23 +59,25 @@ static inline bool bm_send_argv(mach_port_t* cache, const char* service, const c
   for (int i = 0; i < argc; i++) { size_t l = strlen(argv[i]) + 1; memcpy(buf + c, argv[i], l); c += l; }
   buf[c++] = '\0';
   if (!*cache) *cache = bm_lookup(service);
-  bool ok = bm_send(*cache, buf, (uint32_t)c);
-  if (!ok) { *cache = bm_lookup(service); ok = bm_send(*cache, buf, (uint32_t)c); }
+  bool ok = bm_send(*cache, buf, (uint32_t)c, timeout);
+  if (!ok) { *cache = bm_lookup(service); ok = bm_send(*cache, buf, (uint32_t)c, timeout); }
   free(buf);
   return ok;
 }
 
+// barsd sends to SketchyBar from its own serial queue (never the receive loop),
+// so it can afford to wait for a busy SketchyBar instead of dropping commands.
 static mach_port_t g_sb_port = 0;
 static inline bool sb_send(const char** argv, int argc) {
   char name[256];
   const char* bar = getenv("BAR_NAME");
   snprintf(name, sizeof(name), "git.felix.%s", bar ? bar : "sketchybar");
-  return bm_send_argv(&g_sb_port, name, argv, argc);
+  return bm_send_argv(&g_sb_port, name, argv, argc, 2000);
 }
 
 static mach_port_t g_barsd_port = 0;
 static inline bool barsd_send(const char** argv, int argc) {
-  return bm_send_argv(&g_barsd_port, BARSD_SERVICE, argv, argc);
+  return bm_send_argv(&g_barsd_port, BARSD_SERVICE, argv, argc, 100);
 }
 
 // ---- server ----

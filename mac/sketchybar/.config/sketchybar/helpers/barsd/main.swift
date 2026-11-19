@@ -22,12 +22,21 @@ let popupClose = 2.0
 
 // MARK: - SketchyBar I/O
 
+// Never send from the main thread: SketchyBar's main thread blocks (no timeout)
+// while delivering item events to us, so if our receive loop is itself stuck
+// sending to SketchyBar both sides only progress on send timeouts, the event
+// queues fill up and the bar lags by seconds (worst with several monitors,
+// where every mouse move between bars fires a burst of hover/exit events).
+// A serial queue keeps the receive loop draining and preserves command order.
+let sbQueue = DispatchQueue(label: "barsd.sb", qos: .userInteractive)
 func sb(_ args: [String]) {
     guard !args.isEmpty else { return }
-    let cstrs = args.map { strdup($0) }
-    defer { cstrs.forEach { free($0) } }
-    var ptrs: [UnsafePointer<CChar>?] = cstrs.map { UnsafePointer($0) }
-    _ = ptrs.withUnsafeMutableBufferPointer { sb_send($0.baseAddress, Int32(args.count)) }
+    sbQueue.async {
+        let cstrs = args.map { strdup($0) }
+        defer { cstrs.forEach { free($0) } }
+        var ptrs: [UnsafePointer<CChar>?] = cstrs.map { UnsafePointer($0) }
+        _ = ptrs.withUnsafeMutableBufferPointer { sb_send($0.baseAddress, Int32(args.count)) }
+    }
 }
 
 func run(_ path: String, _ args: [String]) -> String {
@@ -103,8 +112,12 @@ func loadRoutes() {
         if f.count > 2, f[2] == "hover" { scriptHover.insert(item) }
     }
 }
+var cachedProfile: String?   // reset on "power" / "reload" (providers.sh writes the file first)
 func profile() -> String {
-    (readFile("\(stateDir)/power") ?? "ac").trimmingCharacters(in: .whitespacesAndNewlines)
+    if let p = cachedProfile { return p }
+    let p = (readFile("\(stateDir)/power") ?? "ac").trimmingCharacters(in: .whitespacesAndNewlines)
+    cachedProfile = p
+    return p
 }
 func anim() -> [String] {
     switch profile() {
@@ -339,8 +352,8 @@ func dispatch(_ env: [String: String]) {
         case "arm": armPopup(env["ITEM"] ?? "", after: Double(env["DELAY"] ?? "") ?? popupClose)
         case "cancel": cancelPopupTimer()
         case "badges": updateBadges(force: true)
-        case "power": scheduleBadges(); scheduleRift()
-        case "reload": loadRoutes(); loadColors(); attachItems(); scheduleRift(); updateBadges(force: true)
+        case "power": cachedProfile = nil; scheduleBadges(); scheduleRift()
+        case "reload": cachedProfile = nil; loadRoutes(); loadColors(); attachItems(); scheduleRift(); updateBadges(force: true)
         default: break
         }
         return
